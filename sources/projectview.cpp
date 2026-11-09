@@ -614,8 +614,17 @@ QETResult ProjectView::saveAs()
 {
 	if (!m_project) return(noProjectResult());
 
+		//"Save as" an existing project, usually to start a new one from
+		//it: show its properties (title, variables, default title block)
+		//to update them before saving (a new project shows them when it
+		//is created)
+	const bool copy_of_existing_project{!m_project -> filePath().isEmpty()};
+
 	QString filepath = askUserForFilePath();
 	if (filepath.isEmpty()) return(QETResult());
+	if (copy_of_existing_project) {
+		editProjectProperties();
+	}
 	return(doSave());
 }
 

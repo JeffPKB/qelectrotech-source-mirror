@@ -16,6 +16,7 @@
 	along with QElectroTech.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <QMessageBox>
 #include "configpages.h"
 
 #include "../../NameList/nameslist.h"
@@ -133,8 +134,25 @@ void NewDiagramPage::applyConf()
 
 		TitleBlockProperties new_tbt_prop = ipw -> properties();
 		if (m_project -> defaultTitleBlockProperties() != new_tbt_prop) {
+			const auto old_tbt_prop{m_project -> defaultTitleBlockProperties()};
 			m_project -> setDefaultTitleBlockProperties(ipw -> properties());
 			modified_project = true;
+
+				//The default title block is used only by the new folios:
+				//offer to apply the modifications to the existing ones too
+			const auto count_{m_project -> foliosUsingTitleBlock(old_tbt_prop, new_tbt_prop)};
+			if (count_ > 0 &&
+				QMessageBox::question(
+					this,
+					tr("Cartouche par défaut"),
+					tr("Le cartouche par défaut ne s'applique qu'aux nouveaux folios.\n\n"
+					   "Appliquer aussi les modifications aux %n folio(s) existant(s) ?\n"
+					   "(le titre et le numéro de chaque folio sont conservés)",
+					   "", count_),
+					QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
+			{
+				m_project -> applyTitleBlockToFolios(old_tbt_prop, new_tbt_prop);
+			}
 		}
 
 		ConductorProperties new_conductor_prop = m_cpw -> properties();

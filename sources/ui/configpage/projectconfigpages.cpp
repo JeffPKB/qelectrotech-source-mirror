@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with QElectroTech.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <QMessageBox>
 #include "projectconfigpages.h"
 
 #include "../autoNum/numerotationcontext.h"
@@ -158,8 +159,24 @@ void ProjectMainConfigPage::applyProjectConf()
 	
 	DiagramContext new_properties = project_variables_ -> context();
 	if (m_project -> projectProperties() != new_properties) {
+		const auto old_properties{m_project -> projectProperties()};
 		m_project -> setProjectProperties(new_properties);
 		modified_project = true;
+
+			//A folio with a custom field of the same name keeps its old
+			//value (it overrides the project variable): offer to update them
+		const auto count_{m_project -> foliosUsingVariables(old_properties, new_properties)};
+		if (count_ > 0 &&
+			QMessageBox::question(
+				this,
+				tr("Variables du projet"),
+				tr("%n folio(s) existant(s) ont leur propre valeur pour une variable modifiée "
+				   "et ne seront pas mis à jour.\n\nAppliquer aussi la nouvelle valeur à ces folios ?",
+				   "", count_),
+				QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
+		{
+			m_project -> applyVariablesToFolios(old_properties, new_properties);
+		}
 	}
 	if (modified_project) {
 		m_project -> setModified(true);

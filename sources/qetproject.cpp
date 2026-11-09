@@ -2006,3 +2006,159 @@ void QETProject::removeDiagramsTitleBlockTemplate(TitleBlockTemplatesCollection 
 void QETProject::usedTitleBlockTemplateChanged(const QString &template_name) {
 	emit diagramUsedTemplate(embeddedTitleBlockTemplatesCollection(), template_name);
 }
+
+namespace {
+		/**
+		 * The keys of @a new_context whose value is not the one in
+		 * @a old_context (a variable added or modified)
+		 */
+	QStringList changedKeys(const DiagramContext &old_context, const DiagramContext &new_context)
+	{
+		QStringList keys_;
+		for (const auto &key : new_context.keys()) {
+			if (!old_context.contains(key) || old_context.value(key) != new_context.value(key)) {
+				keys_ << key;
+			}
+		}
+		return keys_;
+	}
+
+		/**
+		 * Copy into @a folio_tbp the fields of the title block modified
+		 * between @a old_tbp and @a new_tbp (the default title block of the
+		 * project). The title and the number of the folio are never copied.
+		 * Return true if @a folio_tbp changed.
+		 */
+	bool copyChangedFields(const TitleBlockProperties &old_tbp,
+						   const TitleBlockProperties &new_tbp,
+						   TitleBlockProperties &folio_tbp)
+	{
+		const auto before_{folio_tbp};
+		if (old_tbp.author   != new_tbp.author)   folio_tbp.author   = new_tbp.author;
+		if (old_tbp.filename != new_tbp.filename) folio_tbp.filename = new_tbp.filename;
+		if (old_tbp.plant    != new_tbp.plant)    folio_tbp.plant    = new_tbp.plant;
+		if (old_tbp.locmach  != new_tbp.locmach)  folio_tbp.locmach  = new_tbp.locmach;
+		if (old_tbp.indexrev != new_tbp.indexrev) folio_tbp.indexrev = new_tbp.indexrev;
+		if (old_tbp.version  != new_tbp.version)  folio_tbp.version  = new_tbp.version;
+		if (old_tbp.date != new_tbp.date || old_tbp.useDate != new_tbp.useDate) {
+			folio_tbp.date    = new_tbp.date;
+			folio_tbp.useDate = new_tbp.useDate;
+		}
+		if (old_tbp.template_name != new_tbp.template_name || old_tbp.collection != new_tbp.collection) {
+			folio_tbp.template_name = new_tbp.template_name;
+			folio_tbp.collection    = new_tbp.collection;
+		}
+		if (old_tbp.display_at != new_tbp.display_at) folio_tbp.display_at = new_tbp.display_at;
+
+			//Custom fields of the title block
+		for (const auto &key : changedKeys(old_tbp.context, new_tbp.context)) {
+			folio_tbp.context.addValue(key, new_tbp.context.value(key));
+		}
+		for (const auto &key : old_tbp.context.keys()) {
+			if (!new_tbp.context.contains(key)) {
+				folio_tbp.context.remove(key);
+			}
+		}
+		return !(folio_tbp == before_);
+	}
+}
+
+/**
+	@brief QETProject::foliosUsingVariables
+	@return the number of folios having a custom field of their title block
+	with the same name as a project variable modified between
+	@a old_context and @a new_context. The custom field of a folio overrides
+	the project variable: these folios would keep their old value.
+*/
+int QETProject::foliosUsingVariables(const DiagramContext &old_context, const DiagramContext &new_context) const
+{
+	const auto keys_{changedKeys(old_context, new_context)};
+	int count_{0};
+	for (const auto &diagram_ : m_diagrams_list)
+	{
+		const auto context_{diagram_->border_and_titleblock.exportTitleBlock().context};
+		for (const auto &key : keys_) {
+			if (context_.contains(key) && context_.value(key) != new_context.value(key)) {
+				++count_;
+				break;
+			}
+		}
+	}
+	return count_;
+}
+
+/**
+	@brief QETProject::applyVariablesToFolios
+	Give the new value of the project variables modified between
+	@a old_context and @a new_context to the custom fields of the same name
+	of the title block of every folio.
+	@return the number of folios modified
+*/
+int QETProject::applyVariablesToFolios(const DiagramContext &old_context, const DiagramContext &new_context)
+{
+	const auto keys_{changedKeys(old_context, new_context)};
+	int count_{0};
+	for (const auto &diagram_ : qAsConst(m_diagrams_list))
+	{
+		auto tbp_{diagram_->border_and_titleblock.exportTitleBlock()};
+		bool modified_{false};
+		for (const auto &key : keys_) {
+			if (tbp_.context.contains(key) && tbp_.context.value(key) != new_context.value(key)) {
+				tbp_.context.addValue(key, new_context.value(key));
+				modified_ = true;
+			}
+		}
+		if (modified_) {
+			diagram_->border_and_titleblock.importTitleBlock(tbp_);
+			++count_;
+		}
+	}
+	if (count_) {
+		updateDiagramsFolioData();
+		setModified(true);
+	}
+	return count_;
+}
+
+/**
+	@brief QETProject::foliosUsingTitleBlock
+	@return the number of folios that would change if the modifications of
+	the default title block (@a old_tbp -> @a new_tbp) were applied to them
+*/
+int QETProject::foliosUsingTitleBlock(const TitleBlockProperties &old_tbp, const TitleBlockProperties &new_tbp) const
+{
+	int count_{0};
+	for (const auto &diagram_ : m_diagrams_list)
+	{
+		auto tbp_{diagram_->border_and_titleblock.exportTitleBlock()};
+		if (copyChangedFields(old_tbp, new_tbp, tbp_)) {
+			++count_;
+		}
+	}
+	return count_;
+}
+
+/**
+	@brief QETProject::applyTitleBlockToFolios
+	Apply to every folio the fields of the default title block modified
+	between @a old_tbp and @a new_tbp, keeping the title and the number of
+	each folio.
+	@return the number of folios modified
+*/
+int QETProject::applyTitleBlockToFolios(const TitleBlockProperties &old_tbp, const TitleBlockProperties &new_tbp)
+{
+	int count_{0};
+	for (const auto &diagram_ : qAsConst(m_diagrams_list))
+	{
+		auto tbp_{diagram_->border_and_titleblock.exportTitleBlock()};
+		if (copyChangedFields(old_tbp, new_tbp, tbp_)) {
+			diagram_->border_and_titleblock.importTitleBlock(tbp_);
+			++count_;
+		}
+	}
+	if (count_) {
+		updateDiagramsFolioData();
+		setModified(true);
+	}
+	return count_;
+}

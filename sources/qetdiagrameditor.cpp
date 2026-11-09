@@ -973,7 +973,13 @@ bool QETDiagramEditor::newProject()
 	// add new diagram
 	new_project -> addNewDiagram();
 
-	return addProject(new_project);
+	if (!addProject(new_project)) {
+		return false;
+	}
+		//Show the properties of the new project (title, variables,
+		//default title block) to fill them from the start
+	editProjectProperties(new_project);
+	return true;
 }
 
 /**
