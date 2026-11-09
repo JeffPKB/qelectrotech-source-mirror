@@ -117,6 +117,18 @@ jobs:
           set -e
           cp -n /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll "$BIN/" || true
           echo "DLLs: $(find "$BIN" -name '*.dll' | wc -l)"
+
+          # Translations of Qt itself (OK / Cancel, file dialogs...):
+          # QElectroTech loads lang/qt_<lang>.qm
+          QT_TR=$(/ucrt64/bin/qmake-qt5 -query QT_INSTALL_TRANSLATIONS 2>/dev/null || true)
+          [ -d "$QT_TR" ] || QT_TR=$(dirname "$(find /ucrt64 -path '*qt5*' -name 'qtbase_fr.qm' | head -1)")
+          echo "Qt translations: $QT_TR"
+          for f in "$QT_TR"/qtbase_*.qm; do
+            [ -f "$f" ] || continue
+            l=$(basename "$f" .qm); l=${l#qtbase_}
+            cp "$f" "$GITHUB_WORKSPACE/lang/qt_$l.qm"
+          done
+          ls "$GITHUB_WORKSPACE/lang/qt_fr.qm"
           ls "$BIN/platforms/qwindows.dll"
 
       - name: Assemble the full portable folder
