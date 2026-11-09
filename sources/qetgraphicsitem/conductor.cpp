@@ -1496,11 +1496,14 @@ ConductorProfile Conductor::profile(Qt::Corner path_type) const
 	@brief Conductor::formulaDiagram
 	@return the diagram used to compute the text of this conductor from
 	its formula. A potential continued on other folios by folio reports
-	(or through terminals) must keep the same number everywhere: the
-	formula is computed with the first folio (lowest folio index) of the
-	conductors of the potential sharing the same formula, instead of the
-	folio of each conductor (a wire 601 of the folio 6 was renamed 901 on
-	the folio 9).
+	must keep the same number everywhere (a wire 601 of the folio 6 was
+	renamed 901 on the folio 9): the formula is computed with the folio
+	the wire comes from, following the direction of the folio reports.
+	A "next folio" report (going arrow) on the folio A linked to a
+	"previous folio" report (coming arrow) on the folio B means the wire
+	goes from A to B. The folio of the potential that receives the wire
+	from no other folio is its origin; if there are several (or none,
+	the reports loop), the lowest folio of them is taken.
 */
 Diagram *Conductor::formulaDiagram()
 {
@@ -1509,23 +1512,63 @@ Diagram *Conductor::formulaDiagram()
 		return diagram_;
 	}
 
-	auto best_index{diagram_->folioIndex()};
-	for (const auto &c : relatedPotentialConductors(true))
+	auto potential_{relatedPotentialConductors(true)};
+	if (potential_.isEmpty()) {
+		return diagram_;
+	}
+		//This conductor too: its own terminals can be on a folio report
+	potential_.insert(this);
+
+		//The folios of the potential using the same formula
+	QSet<Diagram *> folios_{diagram_};
+	QSet<Element *> reports_;
+	for (const auto &c : potential_)
 	{
-		if (!c || c == this || c->m_properties.m_formula != m_properties.m_formula) {
+		if (!c) {
 			continue;
 		}
-		const auto other_diagram{c->diagram()};
-		if (other_diagram && other_diagram != diagram_)
-		{
-			const auto index_{other_diagram->folioIndex()};
-			if (index_ >= 0 && index_ < best_index) {
-				best_index = index_;
-				diagram_ = other_diagram;
+		if (c->m_properties.m_formula == m_properties.m_formula && c->diagram()) {
+			folios_.insert(c->diagram());
+		}
+		for (const auto &t : {c->terminal1, c->terminal2}) {
+			if (t && t->parentElement() &&
+				(t->parentElement()->linkType() & Element::AllReport)) {
+				reports_.insert(t->parentElement());
 			}
 		}
 	}
-	return diagram_;
+	if (folios_.size() < 2) {
+		return diagram_;
+	}
+
+		//The folios receiving the wire from another folio
+	QSet<Diagram *> receiving_;
+	for (const auto &report : qAsConst(reports_))
+	{
+		if (report->linkType() != Element::NextReport) {
+			continue;
+		}
+		for (const auto &linked : report->linkedElements()) {
+			if (linked && linked->diagram() && linked->diagram() != report->diagram()) {
+				receiving_.insert(linked->diagram());
+			}
+		}
+	}
+
+	Diagram *origin_{nullptr};
+	Diagram *lowest_{nullptr};
+	for (const auto &folio : qAsConst(folios_))
+	{
+		if (!lowest_ || folio->folioIndex() < lowest_->folioIndex()) {
+			lowest_ = folio;
+		}
+		if (!receiving_.contains(folio) &&
+			(!origin_ || folio->folioIndex() < origin_->folioIndex())) {
+			origin_ = folio;
+		}
+	}
+
+	return origin_ ? origin_ : lowest_;
 }
 
 void Conductor::refreshText()

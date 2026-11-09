@@ -17,6 +17,7 @@
 */
 
 #include "qetproject.h"
+#include "qetgraphicsitem/conductor.h"
 
 #include "ElementsCollection/xmlelementcollection.h"
 #include "autoNum/assignvariables.h"
@@ -259,6 +260,17 @@ void QETProject::refresh()
 			dlgWaiting->setDetail(diagram->title());
 		}
 		diagram->refreshContents();
+	}
+
+		//The folio reports of a folio are linked when this folio is
+		//refreshed, so the texts of the conductors of the first folios were
+		//computed before the reports of the next ones were linked. The
+		//number of a potential continued by folio reports depends on all
+		//of them (see Conductor::formulaDiagram): compute the texts again.
+	for (const auto &diagram : diagrams()) {
+		for (const auto &conductor : diagram->conductors()) {
+			conductor->refreshText();
+		}
 	}
 }
 
