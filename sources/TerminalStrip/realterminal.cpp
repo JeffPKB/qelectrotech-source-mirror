@@ -253,42 +253,91 @@ namespace {
 }
 
 /**
- * @brief RealTerminal::arrival
- * @return the element (and its terminal) reached by the wire of the
- * field side of this terminal, for example "-12M2:U".
- * The field side is the connection point of the terminal element the
- * lowest on the folio (the rightmost one if they are at the same height).
+ * @brief RealTerminal::sideTerminal
+ * @param bottom : true for the field side, false for the cabinet side
+ * @return the connection point of the terminal element the lowest on the
+ * folio (the rightmost one at the same height) if @a bottom is true, the
+ * highest one (the leftmost one at the same height) otherwise.
+ * Return nullptr if the element has less than two connection points and
+ * @a bottom is false, so a single point is only seen from the bottom.
  */
-QString RealTerminal::arrival() const
+Terminal *RealTerminal::sideTerminal(bool bottom) const
 {
 	if (!m_element) {
-		return QString();
+		return nullptr;
+	}
+	const auto terminals_{m_element->terminals()};
+	if (terminals_.isEmpty() || (!bottom && terminals_.size() < 2)) {
+		return nullptr;
 	}
 
-	Terminal *field_terminal{nullptr};
-	for (const auto &t : m_element->terminals())
+	Terminal *best_terminal{nullptr};
+	for (const auto &t : terminals_)
 	{
-		if (!field_terminal) {
-			field_terminal = t;
+		if (!best_terminal) {
+			best_terminal = t;
 			continue;
 		}
 		const auto p{t->dockConductor()};
-		const auto best{field_terminal->dockConductor()};
-		if (p.y() > best.y() + 0.5 ||
-			(qAbs(p.y() - best.y()) <= 0.5 && p.x() > best.x())) {
-			field_terminal = t;
+		const auto best{best_terminal->dockConductor()};
+		const bool lower_{p.y() > best.y() + 0.5 ||
+						  (qAbs(p.y() - best.y()) <= 0.5 && p.x() > best.x())};
+		if (lower_ == bottom) {
+			best_terminal = t;
 		}
 	}
+	return best_terminal;
+}
 
-	if (!field_terminal) {
+/**
+ * @brief RealTerminal::arrival
+ * @return the element (and its terminal) reached by the wire of the
+ * field side (bottom) of this terminal, for example "-12M2:U".
+ */
+QString RealTerminal::arrival() const {
+	return arrivalOnSide(true);
+}
+
+/**
+ * @brief RealTerminal::arrivalTop
+ * @return the element reached by the wire of the cabinet side (top)
+ */
+QString RealTerminal::arrivalTop() const {
+	return arrivalOnSide(false);
+}
+
+QString RealTerminal::arrivalOnSide(bool bottom) const
+{
+	const auto side_terminal{sideTerminal(bottom)};
+	if (!side_terminal) {
 		return QString();
 	}
-
-	for (const auto &c : field_terminal->conductors())
+	for (const auto &c : side_terminal->conductors())
 	{
-		const auto str_{farEnd(c, field_terminal)};
+		const auto str_{farEnd(c, side_terminal)};
 		if (!str_.isEmpty()) {
 			return str_;
+		}
+	}
+	return QString();
+}
+
+/**
+ * @brief RealTerminal::conductorOnSide
+ * @return the number of the wire connected on the bottom (field) side
+ * or on the top (cabinet) side of the terminal. They can be different
+ * for a fuse or a sectional terminal.
+ */
+QString RealTerminal::conductorOnSide(bool bottom) const
+{
+	const auto side_terminal{sideTerminal(bottom)};
+	if (!side_terminal) {
+		return QString();
+	}
+	for (const auto &c : side_terminal->conductors()) {
+		const auto text_{c->properties().text};
+		if (!text_.isEmpty()) {
+			return text_;
 		}
 	}
 	return QString();

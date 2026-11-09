@@ -56,6 +56,10 @@ namespace TerminalStripDrawer
 		qreal arrival{0};
 		qreal core{0};
 		qreal cable{0};
+			//Above the strip: wire number and arrival of the top side
+		qreal top_wire{0};
+		qreal top_arrival{0};
+		qreal top() const { return (top_wire + top_arrival) > 0 ? top_wire + top_arrival + 6 : 0; }
 	};
 
     class AbstractRealTerminalInterface
@@ -73,6 +77,8 @@ namespace TerminalStripDrawer
 			virtual QString cableDestination() const { return QString(); }
 			virtual QString cableType() const { return QString(); }
 			virtual QString arrival() const { return QString(); }
+			virtual QString conductorTop() const { return QString(); }
+			virtual QString arrivalTop() const { return QString(); }
 			virtual TerminalSymbol symbol() const { return TerminalSymbol::Generic; }
     };
 

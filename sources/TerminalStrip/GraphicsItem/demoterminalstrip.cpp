@@ -95,6 +95,16 @@ namespace TerminalStripDrawer
 				return TerminalSymbol::Generic;
 			}
 
+			QString conductorTop() const override {
+					//A sectional terminal: the number change on the top side
+				if (m_xref == QLatin1String("3_A2")) return QStringLiteral("W2B");
+				return conductor();
+			}
+
+			QString arrivalTop() const override {
+				return QStringLiteral("-KM") + m_xref.left(1) + QLatin1Char(':') + m_xref.right(1);
+			}
+
 			QString arrival() const override {
 				if (m_xref.startsWith(QLatin1Char('1'))) {
 					static const QStringList pins{QStringLiteral("U"), QStringLiteral("V"),

@@ -121,8 +121,17 @@ namespace TerminalStripDrawer
 
 	QString TrueRealTerminal::xref() const
 	{
-		if (m_real && m_real->isElement()) {
-			return autonum::AssignVariables::genericXref(m_real->element());
+		if (m_real && m_real->isElement())
+		{
+			auto xref_{autonum::AssignVariables::genericXref(m_real->element())};
+				//The folio of the title block is often "%id/%total" (1/2):
+				//keep only the number of the page, "1/2-E2" become "1-E2"
+			const auto dash_{xref_.lastIndexOf(QLatin1Char('-'))};
+			const auto slash_{xref_.indexOf(QLatin1Char('/'))};
+			if (slash_ > 0 && dash_ > slash_) {
+				xref_.remove(slash_, dash_ - slash_);
+			}
+			return xref_;
 		} else {
 			return QString{};
 		}
@@ -130,11 +139,20 @@ namespace TerminalStripDrawer
 
 	QString TrueRealTerminal::conductor() const
 	{
-		if (m_real) {
-			return m_real->conductor();
-		} else {
-			return QString{};
-		}
+			//The wire number written under the strip is the one of the
+			//bottom side (it can be different from the top one for a
+			//fuse or a sectional terminal)
+		return m_real ? m_real->conductorOnSide(true) : QString{};
+	}
+
+	QString TrueRealTerminal::conductorTop() const
+	{
+		return m_real ? m_real->conductorOnSide(false) : QString{};
+	}
+
+	QString TrueRealTerminal::arrivalTop() const
+	{
+		return m_real ? m_real->arrivalTop() : QString{};
 	}
 
 	QString TrueRealTerminal::cable() const

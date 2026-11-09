@@ -295,3 +295,20 @@ QToolBar QToolButton:pressed, QToolBar QToolButton:checked {
 QToolBar::separator {
 	background-color: #8f9396;
 }
+
+/* ---------- Menus deroulants clairs (comme la barre d'outils) ---------- */
+QMenu {
+	background-color: #eceef0;
+	color: #1e1e1e;
+	border: 1px solid #8f9396;
+}
+QMenu::item:selected {
+	background-color: #3d6fa8;
+	color: #ffffff;
+}
+QMenu::item:disabled {
+	color: #8f9396;
+}
+QMenu::separator {
+	background: #b9bcbf;
+}

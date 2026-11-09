@@ -24,6 +24,7 @@
 
 class TerminalStrip;
 class Element;
+class Terminal;
 class TerminalElement;
 class PhysicalTerminal;
 class TerminalStripBridge;
@@ -68,6 +69,8 @@ class RealTerminal
 		QString cableDestination() const;
 		QString cableType() const;
 		QString arrival() const;
+		QString arrivalTop() const;
+		QString conductorOnSide(bool bottom) const;
 
 			//Keys of the element informations of a terminal element
 			//used to store the cable data
@@ -87,6 +90,12 @@ class RealTerminal
 		QSharedPointer<TerminalStripBridge> bridge() const;
 
 		Element* element() const;
+
+	private:
+		Terminal *sideTerminal(bool bottom) const;
+		QString arrivalOnSide(bool bottom) const;
+
+	public:
 		QUuid elementUuid() const;
 
 		static QString xmlTagName();

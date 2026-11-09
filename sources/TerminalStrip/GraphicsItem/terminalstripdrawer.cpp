@@ -322,6 +322,43 @@ void TerminalStripDrawer::paint(QPainter *painter)
 					painter->restore();
 				}
 
+					//Above the terminal: the wire of the top side
+				const auto top_wire_string{shared_real_terminal->conductorTop()};
+				const auto top_arrival_string{shared_real_terminal->arrivalTop()};
+				if (!top_wire_string.isEmpty() || !top_arrival_string.isEmpty())
+				{
+					painter->save();
+					const auto line_x{terminal_rect.width()/2};
+					const auto top_end{-zones_.top()};
+					painter->drawLine(QPointF{line_x, terminal_rect.y()},
+									  QPointF{line_x, top_end});
+
+						//From the terminal to the top: wire number, then arrival
+					QTextOption top_text_option{Qt::AlignLeft | Qt::AlignBottom};
+					top_text_option.setWrapMode(QTextOption::NoWrap);
+					qreal y_{-6};
+					const auto draw_top_zone = [&](const QString &text, qreal zone_height)
+					{
+						if (zone_height <= 0) {
+							return;
+						}
+						if (!text.isEmpty())
+						{
+							painter->save();
+							QRectF rect_{0, y_ - zone_height, line_x - 1, zone_height};
+							painter->translate(rect_.bottomLeft());
+							painter->rotate(270);
+							rect_.setRect(0, 0, rect_.height(), rect_.width());
+							painter->drawText(rect_, text, top_text_option);
+							painter->restore();
+						}
+						y_ -= zone_height;
+					};
+					draw_top_zone(top_wire_string, zones_.top_wire);
+					draw_top_zone(top_arrival_string, zones_.top_arrival);
+					painter->restore();
+				}
+
                     //Add bridge anchor
                 if (shared_real_terminal->isBridged())
                 {
@@ -435,7 +472,9 @@ void TerminalStripDrawer::paint(QPainter *painter)
 
 QRectF TerminalStripDrawer::boundingRect() const
 {
-    return QRectF{0, 0, width(), height()};;
+		//The wires of the top side are drawn above the strip, at y < 0
+	const auto top_{belowZones().top()};
+	return QRectF{0, -top_, width(), height() + top_};
 }
 
 void TerminalStripDrawer::setLayout(QSharedPointer<TerminalStripLayoutPattern> layout)
@@ -588,6 +627,8 @@ BelowZones TerminalStripDrawer::belowZones() const
 			if (!real_t->arrival().isEmpty())   zones_.arrival = m_pattern->m_arrival_text_height;
 			if (!real_t->cableWire().isEmpty()) zones_.core    = m_pattern->m_core_text_height;
 			if (!real_t->cable().isEmpty())     zones_.cable   = m_pattern->m_cable_height;
+			if (!real_t->conductorTop().isEmpty()) zones_.top_wire    = m_pattern->m_wire_text_height;
+			if (!real_t->arrivalTop().isEmpty())   zones_.top_arrival = m_pattern->m_arrival_text_height;
 		}
 	}
 	return zones_;
