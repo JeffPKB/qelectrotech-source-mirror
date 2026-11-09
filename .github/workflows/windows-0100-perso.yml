@@ -28,7 +28,7 @@ jobs:
 
       - name: Checkout the needed submodules
         shell: bash
-        run: git submodule update --init --depth 1 SingleApplication pugixml
+        run: git submodule update --init --depth 1 SingleApplication pugixml elements
 
       - name: Install MSYS2 with Qt5
         uses: msys2/setup-msys2@v2
@@ -119,29 +119,41 @@ jobs:
           echo "DLLs: $(find "$BIN" -name '*.dll' | wc -l)"
           ls "$BIN/platforms/qwindows.dll"
 
-      - name: Zip the bin folder
+      - name: Assemble the full portable folder
         shell: pwsh
         run: |
+          $dst = "out"
+          foreach ($d in @("elements", "titleblocks", "examples", "ico", "lang")) {
+            if (Test-Path $d) { Copy-Item -Recurse -Force $d "$dst\$d" }
+          }
+          Get-ChildItem "$dst\lang" -Filter *.ts | Remove-Item
+          foreach ($f in @("ChangeLog", "CREDIT", "ELEMENTS.LICENSE", "LICENSE", "README")) {
+            if (Test-Path $f) { Copy-Item $f "$dst\" }
+          }
+          Copy-Item "build-aux\windows\Lancer QET.bat" "$dst\"
+          Copy-Item misc\theme-sombre\style.css "$dst\theme-sombre-style.css"
           @"
-          QElectroTech 0.100 + corrections perso
-          - taille de police du gestionnaire de bornier enregistree dans le projet
-          - police 9 par defaut
-          - numeros de fil sous les bornes
+          QElectroTech 0.100 + modifications perso
+          - taille de police du gestionnaire de bornier enregistree dans le projet (9 par defaut)
+          - numeros de fil, repere d'arrivee, conducteurs et cables sous les bornes
+          - symbole du type de borne (fusible, sectionnable, terre, diode)
+          - theme sombre (theme-sombre-style.css)
 
-          Installation :
-          1. Fermer QElectroTech.
-          2. Dans C:\Program Files\QElectroTech, renommer le dossier "bin" en "bin_origine".
-          3. Copier le dossier "bin" de ce zip a sa place.
-          Pour revenir en arriere : supprimer "bin" et renommer "bin_origine" en "bin".
-          "@ | Out-File -Encoding utf8 out\LISEZ-MOI.txt
-          Copy-Item misc\theme-sombre\style.css out\theme-sombre-style.css
-          Compress-Archive -Path out\* -DestinationPath QElectroTech-0.100-perso-bin.zip
+          Installation : dezipper ce dossier ou vous voulez, par exemple C:\QElectroTech-perso,
+          puis lancer "Lancer QET.bat". L'installation actuelle de QElectroTech n'est pas touchee.
+
+          Theme sombre : copier theme-sombre-style.css sous le nom style.css dans
+          C:\Users\<votre nom>\AppData\Local\QElectroTech\QElectroTech\
+          puis decocher "Utiliser les couleurs du systeme" dans Configuration > General.
+          "@ | Out-File -Encoding utf8 "$dst\LISEZ-MOI.txt"
+          Compress-Archive -Path "$dst\*" -DestinationPath QElectroTech-0.100-perso.zip
+          Get-Item QElectroTech-0.100-perso.zip | Select-Object Name, Length
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: QElectroTech-0.100-perso-bin
-          path: QElectroTech-0.100-perso-bin.zip
+          name: QElectroTech-0.100-perso
+          path: QElectroTech-0.100-perso.zip
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
@@ -149,4 +161,4 @@ jobs:
           tag_name: v0.100-perso
           name: QElectroTech 0.100 perso
           prerelease: false
-          files: QElectroTech-0.100-perso-bin.zip
+          files: QElectroTech-0.100-perso.zip
