@@ -63,6 +63,7 @@ class TerminalStripModel : public QAbstractTableModel
 			Led = 13,
 			CableDestination = 14,
 			Arrival = 15,
+			CableType = 16,
 			Invalid = 99
 		};
 

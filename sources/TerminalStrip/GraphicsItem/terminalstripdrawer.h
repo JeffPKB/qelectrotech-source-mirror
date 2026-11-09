@@ -71,6 +71,7 @@ namespace TerminalStripDrawer
 			virtual QString cable() const { return QString(); }
 			virtual QString cableWire() const { return QString(); }
 			virtual QString cableDestination() const { return QString(); }
+			virtual QString cableType() const { return QString(); }
 			virtual QString arrival() const { return QString(); }
 			virtual TerminalSymbol symbol() const { return TerminalSymbol::Generic; }
     };

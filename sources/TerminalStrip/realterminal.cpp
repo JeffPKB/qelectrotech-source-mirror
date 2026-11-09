@@ -189,6 +189,17 @@ QString RealTerminal::cableDestination() const {
 	return QString();
 }
 
+/**
+ * @brief RealTerminal::cableType
+ * @return the type of the cable of this terminal (4G2,5...)
+ */
+QString RealTerminal::cableType() const {
+	if (m_element) {
+		return m_element->elementInformations().value(cableTypeKey()).toString();
+	}
+	return QString();
+}
+
 namespace {
 		/**
 		 * Return "label:terminal" of the element at the other end of

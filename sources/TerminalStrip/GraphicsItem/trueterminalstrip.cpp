@@ -157,6 +157,11 @@ namespace TerminalStripDrawer
 		return m_real ? m_real->arrival() : QString{};
 	}
 
+	QString TrueRealTerminal::cableType() const
+	{
+		return m_real ? m_real->cableType() : QString{};
+	}
+
 	TerminalSymbol TrueRealTerminal::symbol() const
 	{
 		if (!m_real) {

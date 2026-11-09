@@ -63,6 +63,7 @@ namespace TerminalStripDrawer
 			QString cable() const override;
 			QString cableWire() const override;
 			QString cableDestination() const override;
+			QString cableType() const override;
 			QString arrival() const override;
 			TerminalSymbol symbol() const override;
 

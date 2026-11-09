@@ -130,7 +130,7 @@ void TerminalStripDrawer::paint(QPainter *painter)
 		below_text_option.setWrapMode(QTextOption::NoWrap);
 
 			//Runs of consecutive terminals sharing the same cable
-		struct CableRun { QString name; QString destination; qreal x1; qreal x2; };
+		struct CableRun { QString name; QString type; QString destination; qreal x1; qreal x2; };
 		QVector<CableRun> cable_runs;
 
 		QHash<QUuid, QVector<QPointF>> bridges_anchor_points;
@@ -267,15 +267,19 @@ void TerminalStripDrawer::paint(QPainter *painter)
 						if (cable_runs.last().destination.isEmpty()) {
 							cable_runs.last().destination = shared_real_terminal->cableDestination();
 						}
+						if (cable_runs.last().type.isEmpty()) {
+							cable_runs.last().type = shared_real_terminal->cableType();
+						}
 					} else {
 						cable_runs.append(CableRun{cable_name,
+												   shared_real_terminal->cableType(),
 												   shared_real_terminal->cableDestination(),
 												   wire_x, wire_x});
 					}
 				}
 				else if (!cable_runs.isEmpty() && !cable_runs.last().name.isEmpty()) {
 						//A terminal without cable end the current run
-					cable_runs.append(CableRun{QString(), QString(), wire_x, wire_x});
+					cable_runs.append(CableRun{QString(), QString(), QString(), wire_x, wire_x});
 				}
 
 					//Draw the wire under the terminal and its texts
@@ -352,6 +356,13 @@ void TerminalStripDrawer::paint(QPainter *painter)
 			//name of the cable and its destination at the end
 		painter->save();
 		painter->setFont(m_pattern->font());
+			//The pen of the painter was restored to the one of the view,
+			//which follow the theme of the interface: force black
+		{
+			QPen black_pen{Qt::black};
+			black_pen.setWidth(1);
+			painter->setPen(black_pen);
+		}
 		const QFontMetricsF metrics{painter->font()};
 		qreal last_right{-1e9};
 		for (const auto &run : qAsConst(cable_runs))
@@ -368,7 +379,9 @@ void TerminalStripDrawer::paint(QPainter *painter)
 			painter->setPen(pen_);
 			const auto center_x{(run.x1 + run.x2)/2};
 
-			const auto tag_w{metrics.horizontalAdvance(run.name) + 8};
+			const auto name_w{metrics.horizontalAdvance(run.name) + 8};
+			const auto type_w{run.type.isEmpty() ? 0 : metrics.horizontalAdvance(run.type) + 8};
+			const auto tag_w{name_w + type_w};
 			const auto tag_h{metrics.height() + 4};
 			const auto dest_w{run.destination.isEmpty() ? 0 : metrics.horizontalAdvance(run.destination)};
 			const auto half_w{qMax(tag_w, dest_w)/2};
@@ -383,10 +396,19 @@ void TerminalStripDrawer::paint(QPainter *painter)
 			}
 			painter->drawLine(QPointF{center_x, bar_y}, QPointF{center_x, tag_y});
 
+				//The tag: the name of the cable, and its type (4G2,5...)
+				//in a box stuck to its right
 			const QRectF tag{center_x - tag_w/2, tag_y, tag_w, tag_h};
+			const QRectF name_rect{tag.left(), tag_y, name_w, tag_h};
 			painter->setBrush(Qt::white);
-			painter->drawRect(tag);
-			painter->drawText(tag, Qt::AlignCenter, run.name);
+			painter->drawRect(name_rect);
+			painter->drawText(name_rect, Qt::AlignCenter, run.name);
+			if (type_w > 0)
+			{
+				const QRectF type_rect{name_rect.right(), tag_y, type_w, tag_h};
+				painter->drawRect(type_rect);
+				painter->drawText(type_rect, Qt::AlignCenter, run.type);
+			}
 
 			if (!run.destination.isEmpty())
 			{
@@ -402,7 +424,7 @@ void TerminalStripDrawer::paint(QPainter *painter)
 		for (const auto &points_ : qAsConst(bridges_anchor_points))
 		{
 			painter->save();
-			auto pen_{painter->pen()};
+			QPen pen_{Qt::black};
 			pen_.setWidth(2);
 			painter->setPen(pen_);
 			painter->drawPolyline(QPolygonF{points_});

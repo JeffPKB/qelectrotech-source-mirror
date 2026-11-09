@@ -203,7 +203,8 @@ void TerminalStripEditor::apply()
 					const QVector<QPair<QString, QString>> cable_values{
 						{RealTerminal::cableKey(), data_.cable_},
 						{RealTerminal::cableWireKey(), data_.cable_wire},
-						{RealTerminal::cableDestinationKey(), data_.cable_destination}};
+						{RealTerminal::cableDestinationKey(), data_.cable_destination},
+						{RealTerminal::cableTypeKey(), data_.cable_type}};
 					for (const auto &pair_ : cable_values) {
 						if (pair_.second.isEmpty()) {
 							current_data.m_informations.remove(pair_.first);

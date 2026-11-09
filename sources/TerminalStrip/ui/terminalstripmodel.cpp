@@ -48,8 +48,9 @@ const int FUNCTION_CELL = 12;
 const int LED_CELL = 13;
 const int CABLE_DEST_CELL = 14;
 const int ARRIVAL_CELL = 15;
+const int CABLE_TYPE_CELL = 16;
 
-const int COLUMN_COUNT = 16;
+const int COLUMN_COUNT = 17;
 
 static QVector<bool> UNMODIFIED_CELL_VECTOR(COLUMN_COUNT, false);
 
@@ -97,6 +98,7 @@ TerminalStripModel::Column TerminalStripModel::columnTypeForIndex(const QModelIn
 			case 13 : return Led;
 			case 14 : return CableDestination;
 			case 15 : return Arrival;
+			case 16 : return CableType;
 			default : return Invalid;
 		}
 	}
@@ -174,6 +176,7 @@ QVariant TerminalStripModel::data(const QModelIndex &index, int role) const
 			case CABLE_WIRE_CELL : return mrtd.cable_wire;
 			case CABLE_DEST_CELL : return mrtd.cable_destination;
 			case ARRIVAL_CELL :    return mrtd.arrival_;
+			case CABLE_TYPE_CELL : return mrtd.cable_type;
 			case TYPE_CELL :       return ElementData::translatedTerminalType(mrtd.type_);
 			case FUNCTION_CELL :   return ElementData::translatedTerminalFunction(mrtd.function_);
 			default :              return QVariant();
@@ -186,6 +189,7 @@ QVariant TerminalStripModel::data(const QModelIndex &index, int role) const
 			case CABLE_CELL : return mrtd.cable_;
 			case CABLE_WIRE_CELL : return mrtd.cable_wire;
 			case CABLE_DEST_CELL : return mrtd.cable_destination;
+			case CABLE_TYPE_CELL : return mrtd.cable_type;
 			default: return QVariant();
 
 		}
@@ -281,6 +285,14 @@ bool TerminalStripModel::setData(const QModelIndex &index, const QVariant &value
 		modified_ = true;
 		modified_cell = CABLE_DEST_CELL;
 	}
+	else if (column_ == CABLE_TYPE_CELL &&
+			 role == Qt::EditRole &&
+			 mrtd.cable_type != value.toString())
+	{
+		mrtd.cable_type = value.toString().trimmed();
+		modified_ = true;
+		modified_cell = CABLE_TYPE_CELL;
+	}
 
 		//Set the modification to the terminal data
 	if (modified_)
@@ -326,6 +338,7 @@ QVariant TerminalStripModel::headerData(int section, Qt::Orientation orientation
 				case CABLE_WIRE_CELL: return tr("Couleur / numéro de fil câble");
 				case CABLE_DEST_CELL: return tr("Destination câble");
 				case ARRIVAL_CELL:    return tr("Repère d'arrivée");
+				case CABLE_TYPE_CELL: return tr("Type de câble");
 				case TYPE_CELL:       return tr("Type");
 				case FUNCTION_CELL :  return tr("Fonction");
 				case LED_CELL:        return tr("led");
@@ -343,7 +356,8 @@ Qt::ItemFlags TerminalStripModel::flags(const QModelIndex &index) const
 
 	auto c = index.column();
 	if (c == LABEL_CELL || c == TYPE_CELL || c == FUNCTION_CELL ||
-		c == CABLE_CELL || c == CABLE_WIRE_CELL || c == CABLE_DEST_CELL)
+		c == CABLE_CELL || c == CABLE_WIRE_CELL || c == CABLE_DEST_CELL ||
+		c == CABLE_TYPE_CELL)
 		flags = flags | Qt::ItemIsEditable;
 	if (c == LED_CELL) {
 		flags = flags | Qt::ItemIsUserCheckable;

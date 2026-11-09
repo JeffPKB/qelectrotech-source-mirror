@@ -72,6 +72,12 @@ namespace TerminalStripDrawer
 				return QString();
 			}
 
+			QString cableType() const override {
+				if (m_xref.startsWith(QLatin1Char('1'))) return QStringLiteral("4G2,5");
+				if (m_xref.startsWith(QLatin1Char('2'))) return QStringLiteral("4G1,5");
+				return QString();
+			}
+
 			QString cableWire() const override {
 				static const QStringList colors{QStringLiteral("BN"), QStringLiteral("BK"),
 												QStringLiteral("GY"), QStringLiteral("GNYE")};

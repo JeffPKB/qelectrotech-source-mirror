@@ -35,6 +35,7 @@ struct modelRealTerminalData
 				mrtd.cable_ = real_t->cable();
 				mrtd.cable_wire = real_t->cableWire();
 				mrtd.cable_destination = real_t->cableDestination();
+				mrtd.cable_type = real_t->cableType();
 				mrtd.arrival_ = real_t->arrival();
 				mrtd.conductor_ = real_t->conductor();
 				mrtd.led_ = real_t->isLed();
@@ -54,6 +55,7 @@ struct modelRealTerminalData
 		QString cable_;
 		QString cable_wire;
 		QString cable_destination;
+		QString cable_type;
 		QString arrival_;
 		QString conductor_;
 		bool led_ = false;
