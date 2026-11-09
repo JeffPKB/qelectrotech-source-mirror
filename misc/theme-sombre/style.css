@@ -270,3 +270,28 @@ QProgressBar::chunk {
 QSplitter::handle {
 	background-color: #444648;
 }
+
+/* ---------- Barres d'outils claires : les icones de QElectroTech sont
+   dessinees pour un fond clair, elles restent ainsi bien lisibles ---------- */
+QToolBar {
+	background-color: #c9cccf;
+	border-bottom: 1px solid #8f9396;
+}
+QToolBar QLabel, QToolBar QComboBox {
+	color: #1e1e1e;
+}
+QToolBar QComboBox {
+	background-color: #e4e6e8;
+	border: 1px solid #8f9396;
+}
+QToolBar QToolButton:hover {
+	background-color: #dfe3e8;
+	border-color: #7a8ea6;
+}
+QToolBar QToolButton:pressed, QToolBar QToolButton:checked {
+	background-color: #a9c3e0;
+	border-color: #3d6fa8;
+}
+QToolBar::separator {
+	background-color: #8f9396;
+}
