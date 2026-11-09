@@ -125,6 +125,7 @@ class Conductor : public QGraphicsObject
 		void calculateTextItemPosition();
 		virtual Highlight highlight() const;
 		virtual void setHighlighted(Highlight);
+		Diagram *formulaDiagram();
 		QSet<Conductor *> relatedPotentialConductors(
 				const bool all_diagram = true,
 				QList <Terminal *> *t_list=nullptr);

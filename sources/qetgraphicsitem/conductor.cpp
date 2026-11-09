@@ -1492,6 +1492,42 @@ ConductorProfile Conductor::profile(Qt::Corner path_type) const
 	Refresh the text of this conductor.
 	recalculate and set the text according to the formula.
 */
+/**
+	@brief Conductor::formulaDiagram
+	@return the diagram used to compute the text of this conductor from
+	its formula. A potential continued on other folios by folio reports
+	(or through terminals) must keep the same number everywhere: the
+	formula is computed with the first folio (lowest folio index) of the
+	conductors of the potential sharing the same formula, instead of the
+	folio of each conductor (a wire 601 of the folio 6 was renamed 901 on
+	the folio 9).
+*/
+Diagram *Conductor::formulaDiagram()
+{
+	auto diagram_{diagram()};
+	if (!diagram_ || m_properties.m_formula.isEmpty()) {
+		return diagram_;
+	}
+
+	auto best_index{diagram_->folioIndex()};
+	for (const auto &c : relatedPotentialConductors(true))
+	{
+		if (!c || c == this || c->m_properties.m_formula != m_properties.m_formula) {
+			continue;
+		}
+		const auto other_diagram{c->diagram()};
+		if (other_diagram && other_diagram != diagram_)
+		{
+			const auto index_{other_diagram->folioIndex()};
+			if (index_ >= 0 && index_ < best_index) {
+				best_index = index_;
+				diagram_ = other_diagram;
+			}
+		}
+	}
+	return diagram_;
+}
+
 void Conductor::refreshText()
 {
 	if (m_freeze_label)
@@ -1504,7 +1540,7 @@ void Conductor::refreshText()
 		{
 			if (diagram())
 			{
-				QString text = autonum::AssignVariables::formulaToLabel(m_properties.m_formula, m_autoNum_seq, diagram(), nullptr, this);
+				QString text = autonum::AssignVariables::formulaToLabel(m_properties.m_formula, m_autoNum_seq, formulaDiagram(), nullptr, this);
 				m_properties.text = text;
 				m_text_item->setPlainText(text);
 			}
@@ -1589,7 +1625,7 @@ void Conductor::setProperties(const ConductorProperties &property)
 	{
 		if (diagram())
 		{
-			QString text = autonum::AssignVariables::formulaToLabel(m_properties.m_formula, m_autoNum_seq, diagram(), nullptr, this);
+			QString text = autonum::AssignVariables::formulaToLabel(m_properties.m_formula, m_autoNum_seq, formulaDiagram(), nullptr, this);
 			m_properties.text = text;
 		}
 		else if (m_properties.text.isEmpty())
