@@ -42,6 +42,27 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_prefix">
+         <item>
+          <widget class="QLabel" name="m_prefix_label">
+           <property name="text">
+            <string>Préfixe du repère :</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QLineEdit" name="m_prefix_le">
+           <property name="placeholderText">
+            <string>ex. KM, KA, F, Q (vide : préfixe du dossier)</string>
+           </property>
+           <property name="toolTip">
+            <string>Préfixe du repère automatique de cet élément (KM pour un contacteur moteur, KA pour un relais auxiliaire...). Prioritaire sur le préfixe du dossier.</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <widget class="QGroupBox" name="m_slave_gb">
          <property name="title">
           <string>Élément esclave</string>

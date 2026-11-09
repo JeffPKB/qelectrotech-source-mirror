@@ -112,7 +112,9 @@ Element::Element(
 		*state = 0;
 	}
 
-	setPrefix(autonum::elementPrefixForLocation(location));
+		//The prefix set in the element itself, else the one of its folder
+	setPrefix(m_data.m_prefix.isEmpty() ? autonum::elementPrefixForLocation(location)
+										: m_data.m_prefix);
 	m_uuid = QUuid::createUuid();
 	setZValue(10);
 	setFlags(QGraphicsItem::ItemIsMovable

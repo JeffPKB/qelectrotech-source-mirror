@@ -50,6 +50,7 @@ bool ElementData::fromXml(const QDomElement &xml_element)
 	}
 
 	m_type = typeFromString(xml_element.attribute(QStringLiteral("link_type"), QStringLiteral("simple")));
+	m_prefix = xml_element.attribute(QStringLiteral("prefix")).trimmed();
 	kindInfoFromXml(xml_element);
 	m_informations.fromXml(xml_element.firstChildElement(QStringLiteral("elementInformations")),
 							QStringLiteral("elementInformation"));
@@ -218,6 +219,10 @@ bool ElementData::terminalPropertiesIsOverrided() const
 bool ElementData::operator==(const ElementData &data) const
 {
 	if (data.m_type != m_type) {
+		return false;
+	}
+
+	if (data.m_prefix != m_prefix) {
 		return false;
 	}
 

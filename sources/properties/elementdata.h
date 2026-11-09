@@ -145,6 +145,9 @@ class ElementData : public PropertiesInterface
 		DiagramContext m_informations;
 		NamesList m_names_list;
 		QString m_drawing_information;
+			//Prefix of the label of the element (KM, KA, F...), set in the
+			//element editor. Empty: the prefix of the folder (qet_labels.xml)
+		QString m_prefix;
 
 	private:
 		ElementData::TerminalType m_override_terminal_type = ElementData::TTGeneric;

@@ -80,6 +80,8 @@ ElementPropertiesEditorWidget::~ElementPropertiesEditorWidget()
 */
 void ElementPropertiesEditorWidget::upDateInterface()
 {
+	ui->m_prefix_le->setText(m_data.m_prefix);
+
 	ui->m_base_type_cb->setCurrentIndex(
 				ui->m_base_type_cb->findData(
 					m_data.m_type));
@@ -216,6 +218,8 @@ void ElementPropertiesEditorWidget::populateTree()
 */
 void ElementPropertiesEditorWidget::on_m_buttonBox_accepted()
 {
+	m_data.m_prefix = ui->m_prefix_le->text().trimmed();
+
 	m_data.m_type = ui->m_base_type_cb->currentData().value<ElementData::Type>();
 
 	if (m_data.m_type == ElementData::Slave)
