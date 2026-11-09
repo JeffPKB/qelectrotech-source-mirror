@@ -86,6 +86,11 @@ add_executable(
   ${QET_DIR}/qelectrotech.qrc
   )
 
+# Windows: a GUI application, without a console window behind it
+if(WIN32)
+  set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE ON)
+endif()
+
 target_link_libraries(
   ${PROJECT_NAME}
   PUBLIC
