@@ -46,6 +46,83 @@
 #include <QFontDatabase>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
+#include <QWidget>
+#include <QLibrary>
+
+namespace {
+		/**
+		 * Give a dark (or light again) title bar to the windows of
+		 * QElectroTech when the dark theme (a style sheet instead of the
+		 * system colors) is used, whatever the mode of Windows is.
+		 * Nothing on the other systems: the title bar is drawn by the
+		 * window manager.
+		 */
+	class DarkTitleBarFilter : public QObject
+	{
+		public:
+			bool m_dark{false};
+
+			static void apply(QWidget *widget, bool dark)
+			{
+#ifdef Q_OS_WIN
+				if (!widget || !widget->isWindow() || !widget->testAttribute(Qt::WA_WState_Created)) {
+					return;
+				}
+					//DwmSetWindowAttribute of dwmapi.dll, resolved at run time
+					//(no windows.h: its macros conflict with the code of QET)
+				using DwmSetWindowAttributeFn = long (__stdcall *)(void *, unsigned long, const void *, unsigned long);
+				static const auto set_attribute = reinterpret_cast<DwmSetWindowAttributeFn>(
+							QLibrary::resolve(QStringLiteral("dwmapi"), "DwmSetWindowAttribute"));
+				if (!set_attribute) {
+					return;
+				}
+				const int value_{dark ? 1 : 0};
+				const auto hwnd_{reinterpret_cast<void *>(widget->winId())};
+					//20 : DWMWA_USE_IMMERSIVE_DARK_MODE (Windows 10 20H1 and later)
+					//19 : the same attribute for the older Windows 10
+				if (set_attribute(hwnd_, 20, &value_, sizeof(value_)) < 0) {
+					set_attribute(hwnd_, 19, &value_, sizeof(value_));
+				}
+#else
+				Q_UNUSED(widget)
+				Q_UNUSED(dark)
+#endif
+			}
+
+		protected:
+			bool eventFilter(QObject *watched, QEvent *event) override
+			{
+				if (event->type() == QEvent::Show) {
+					if (auto widget_ = qobject_cast<QWidget *>(watched);
+						widget_ && widget_->isWindow()) {
+						apply(widget_, m_dark);
+					}
+				}
+				return QObject::eventFilter(watched, event);
+			}
+	};
+
+	DarkTitleBarFilter *darkTitleBarFilter()
+	{
+		static DarkTitleBarFilter *filter_ = [] {
+			auto f_ = new DarkTitleBarFilter;
+			qApp->installEventFilter(f_);
+			return f_;
+		}();
+		return filter_;
+	}
+
+	void setDarkTitleBars(bool dark)
+	{
+		auto filter_{darkTitleBarFilter()};
+		filter_->m_dark = dark;
+		for (const auto &widget_ : QApplication::topLevelWidgets()) {
+			if (widget_->isVisible()) {
+				DarkTitleBarFilter::apply(widget_, dark);
+			}
+		}
+	}
+}
 #ifdef BUILD_WITHOUT_KF5
 #else
 #	include <KAutoSaveFile>
@@ -1620,6 +1697,8 @@ void QETApp::invertMainWindowVisibility(QWidget *window) {
 	false pour utiliser celles du theme en cours
 */
 void QETApp::useSystemPalette(bool use) {
+		//Dark title bars of Windows with the style sheet (dark theme)
+	setDarkTitleBars(!use);
 	if (use) {
 		qApp->setPalette(initial_palette_);
 		qApp->setStyleSheet(

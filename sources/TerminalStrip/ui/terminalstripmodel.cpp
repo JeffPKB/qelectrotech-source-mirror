@@ -42,13 +42,13 @@ const int LABEL_CELL = 6;
 const int CONDUCTOR_CELL = 7;
 const int XREF_CELL = 8;
 const int CABLE_CELL = 9;
-const int CABLE_WIRE_CELL = 10;
-const int TYPE_CELL = 11;
-const int FUNCTION_CELL = 12;
-const int LED_CELL = 13;
-const int CABLE_DEST_CELL = 14;
-const int ARRIVAL_CELL = 15;
-const int CABLE_TYPE_CELL = 16;
+const int CABLE_TYPE_CELL = 10;
+const int CABLE_WIRE_CELL = 11;
+const int CABLE_DEST_CELL = 12;
+const int TYPE_CELL = 13;
+const int FUNCTION_CELL = 14;
+const int LED_CELL = 15;
+const int ARRIVAL_CELL = 16;
 
 const int COLUMN_COUNT = 17;
 
@@ -92,13 +92,13 @@ TerminalStripModel::Column TerminalStripModel::columnTypeForIndex(const QModelIn
 			case 7 : return Conductor;
 			case 8 : return XRef;
 			case 9 : return Cable;
-			case 10 : return CableWire;
-			case 11 : return Type;
-			case 12 : return Function;
-			case 13 : return Led;
-			case 14 : return CableDestination;
-			case 15 : return Arrival;
-			case 16 : return CableType;
+			case 10 : return CableType;
+			case 11 : return CableWire;
+			case 12 : return CableDestination;
+			case 13 : return Type;
+			case 14 : return Function;
+			case 15 : return Led;
+			case 16 : return Arrival;
 			default : return Invalid;
 		}
 	}

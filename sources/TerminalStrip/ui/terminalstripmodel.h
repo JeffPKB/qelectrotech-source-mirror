@@ -57,13 +57,13 @@ class TerminalStripModel : public QAbstractTableModel
 			Conductor = 7,
 			XRef = 8,
 			Cable = 9,
-			CableWire = 10,
-			Type = 11,
-			Function = 12,
-			Led = 13,
-			CableDestination = 14,
-			Arrival = 15,
-			CableType = 16,
+			CableType = 10,
+			CableWire = 11,
+			CableDestination = 12,
+			Type = 13,
+			Function = 14,
+			Led = 15,
+			Arrival = 16,
 			Invalid = 99
 		};
 
