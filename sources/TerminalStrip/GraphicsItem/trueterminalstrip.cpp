@@ -137,6 +137,26 @@ namespace TerminalStripDrawer
 		}
 	}
 
+	QString TrueRealTerminal::cable() const
+	{
+		return m_real ? m_real->cable() : QString{};
+	}
+
+	QString TrueRealTerminal::cableWire() const
+	{
+		return m_real ? m_real->cableWire() : QString{};
+	}
+
+	QString TrueRealTerminal::cableDestination() const
+	{
+		return m_real ? m_real->cableDestination() : QString{};
+	}
+
+	QString TrueRealTerminal::arrival() const
+	{
+		return m_real ? m_real->arrival() : QString{};
+	}
+
     TrueBridge::TrueBridge(QSharedPointer<TerminalStripBridge> bridge) :
         m_bridge { bridge }
     {}

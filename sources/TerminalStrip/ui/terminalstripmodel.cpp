@@ -46,10 +46,12 @@ const int CABLE_WIRE_CELL = 10;
 const int TYPE_CELL = 11;
 const int FUNCTION_CELL = 12;
 const int LED_CELL = 13;
+const int CABLE_DEST_CELL = 14;
+const int ARRIVAL_CELL = 15;
 
-const int COLUMN_COUNT = 14;
+const int COLUMN_COUNT = 16;
 
-static QVector<bool> UNMODIFIED_CELL_VECTOR{false, false, false, false, false, false, false, false, false, false, false, false, false, false};
+static QVector<bool> UNMODIFIED_CELL_VECTOR(COLUMN_COUNT, false);
 
 /**
  * @brief TerminalStripModel::levelForColumn
@@ -93,6 +95,8 @@ TerminalStripModel::Column TerminalStripModel::columnTypeForIndex(const QModelIn
 			case 11 : return Type;
 			case 12 : return Function;
 			case 13 : return Led;
+			case 14 : return CableDestination;
+			case 15 : return Arrival;
 			default : return Invalid;
 		}
 	}
@@ -168,6 +172,8 @@ QVariant TerminalStripModel::data(const QModelIndex &index, int role) const
 			case XREF_CELL :       return mrtd.Xref_;
 			case CABLE_CELL :      return mrtd.cable_;
 			case CABLE_WIRE_CELL : return mrtd.cable_wire;
+			case CABLE_DEST_CELL : return mrtd.cable_destination;
+			case ARRIVAL_CELL :    return mrtd.arrival_;
 			case TYPE_CELL :       return ElementData::translatedTerminalType(mrtd.type_);
 			case FUNCTION_CELL :   return ElementData::translatedTerminalFunction(mrtd.function_);
 			default :              return QVariant();
@@ -177,6 +183,9 @@ QVariant TerminalStripModel::data(const QModelIndex &index, int role) const
 	{
 		switch (index.column()) {
 			case LABEL_CELL : return mrtd.label_;
+			case CABLE_CELL : return mrtd.cable_;
+			case CABLE_WIRE_CELL : return mrtd.cable_wire;
+			case CABLE_DEST_CELL : return mrtd.cable_destination;
 			default: return QVariant();
 
 		}
@@ -248,6 +257,30 @@ bool TerminalStripModel::setData(const QModelIndex &index, const QVariant &value
 		modified_ = true;
 		modified_cell = LABEL_CELL;
 	}
+	else if (column_ == CABLE_CELL &&
+			 role == Qt::EditRole &&
+			 mrtd.cable_ != value.toString())
+	{
+		mrtd.cable_ = value.toString().trimmed();
+		modified_ = true;
+		modified_cell = CABLE_CELL;
+	}
+	else if (column_ == CABLE_WIRE_CELL &&
+			 role == Qt::EditRole &&
+			 mrtd.cable_wire != value.toString())
+	{
+		mrtd.cable_wire = value.toString().trimmed();
+		modified_ = true;
+		modified_cell = CABLE_WIRE_CELL;
+	}
+	else if (column_ == CABLE_DEST_CELL &&
+			 role == Qt::EditRole &&
+			 mrtd.cable_destination != value.toString())
+	{
+		mrtd.cable_destination = value.toString().trimmed();
+		modified_ = true;
+		modified_cell = CABLE_DEST_CELL;
+	}
 
 		//Set the modification to the terminal data
 	if (modified_)
@@ -291,6 +324,8 @@ QVariant TerminalStripModel::headerData(int section, Qt::Orientation orientation
 				case XREF_CELL:       return tr("Référence croisé");
 				case CABLE_CELL:      return tr("Câble");
 				case CABLE_WIRE_CELL: return tr("Couleur / numéro de fil câble");
+				case CABLE_DEST_CELL: return tr("Destination câble");
+				case ARRIVAL_CELL:    return tr("Repère d'arrivée");
 				case TYPE_CELL:       return tr("Type");
 				case FUNCTION_CELL :  return tr("Fonction");
 				case LED_CELL:        return tr("led");
@@ -307,7 +342,8 @@ Qt::ItemFlags TerminalStripModel::flags(const QModelIndex &index) const
 	Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 
 	auto c = index.column();
-	if (c == LABEL_CELL || c == TYPE_CELL || c == FUNCTION_CELL)
+	if (c == LABEL_CELL || c == TYPE_CELL || c == FUNCTION_CELL ||
+		c == CABLE_CELL || c == CABLE_WIRE_CELL || c == CABLE_DEST_CELL)
 		flags = flags | Qt::ItemIsEditable;
 	if (c == LED_CELL) {
 		flags = flags | Qt::ItemIsUserCheckable;

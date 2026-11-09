@@ -60,8 +60,39 @@ namespace TerminalStripDrawer
 				return m_xref;
 			}
 
+			QString cable() const override {
+				if (m_xref.startsWith(QLatin1Char('1'))) return QStringLiteral("-12M2");
+				if (m_xref.startsWith(QLatin1Char('2'))) return QStringLiteral("-76-AU");
+				return QString();
+			}
+
+			QString cableDestination() const override {
+				if (m_xref.startsWith(QLatin1Char('1'))) return QStringLiteral("GH");
+				if (m_xref.startsWith(QLatin1Char('2'))) return QStringLiteral("PUPITRE");
+				return QString();
+			}
+
+			QString cableWire() const override {
+				static const QStringList colors{QStringLiteral("BN"), QStringLiteral("BK"),
+												QStringLiteral("GY"), QStringLiteral("GNYE")};
+				const auto n{m_xref.right(1).toInt()};
+				if (m_xref.startsWith(QLatin1Char('1'))) return colors.value(n - 1);
+				if (m_xref.startsWith(QLatin1Char('2'))) return QString::number(n);
+				return QString();
+			}
+
+			QString arrival() const override {
+				if (m_xref.startsWith(QLatin1Char('1'))) {
+					static const QStringList pins{QStringLiteral("U"), QStringLiteral("V"),
+												  QStringLiteral("W"), QStringLiteral("PE")};
+					return QStringLiteral("-12M2:") + pins.value(m_xref.right(1).toInt() - 1);
+				}
+				if (m_xref.startsWith(QLatin1Char('2'))) return QStringLiteral("X-AU:") + m_xref.right(1);
+				return QString();
+			}
+
 			QString conductor() const override {
-				return QStringLiteral("W") + m_xref;
+				return QStringLiteral("W") + m_xref.right(1) + QStringLiteral("12M2");
 			}
 
         private:

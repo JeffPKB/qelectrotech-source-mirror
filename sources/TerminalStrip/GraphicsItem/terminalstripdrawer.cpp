@@ -117,14 +117,21 @@ void TerminalStripDrawer::paint(QPainter *painter)
 		const auto xref_text_y{m_pattern->m_xref_text_y};
 		QRectF xref_rect;
 
-			//Wire numbers are written under the strip, the wire goes
-			//from the bottom of the terminal to the number.
+			//Under the strip, along the wire of each terminal: the wire
+			//number, the arrival and the core of the cable. A zone is
+			//reserved only if one terminal of the strip at least use it.
 		const auto strip_height{stripHeight()};
-		const auto wire_text_height{m_pattern->m_wire_text_height};
-		const qreal wire_line_length{8};
-		QTextOption wire_text_option{Qt::AlignRight | Qt::AlignVCenter};
-		wire_text_option.setWrapMode(QTextOption::NoWrap);
-		QRectF wire_rect;
+		const auto zones_{belowZones()};
+		const qreal wire_line_length{6};
+		const auto zones_top{strip_height + wire_line_length};
+		const auto zones_bottom{zones_top + zones_.wire + zones_.arrival + zones_.core};
+		const auto bar_y{zones_bottom + 6};
+		QTextOption below_text_option{Qt::AlignRight | Qt::AlignBottom};
+		below_text_option.setWrapMode(QTextOption::NoWrap);
+
+			//Runs of consecutive terminals sharing the same cable
+		struct CableRun { QString name; QString destination; qreal x1; qreal x2; };
+		QVector<CableRun> cable_runs;
 
 		QHash<QUuid, QVector<QPointF>> bridges_anchor_points;
 
@@ -243,27 +250,64 @@ void TerminalStripDrawer::paint(QPainter *painter)
 				}
 				painter->restore();
 
-					//Draw the wire number
+					//Remember the cable of this terminal
+				const auto cable_name{shared_real_terminal->cable()};
+				const auto wire_x{x_offset + terminal_rect.width()/2};
+				if (!cable_name.isEmpty())
+				{
+					if (!cable_runs.isEmpty() && cable_runs.last().name == cable_name) {
+						cable_runs.last().x2 = wire_x;
+						if (cable_runs.last().destination.isEmpty()) {
+							cable_runs.last().destination = shared_real_terminal->cableDestination();
+						}
+					} else {
+						cable_runs.append(CableRun{cable_name,
+												   shared_real_terminal->cableDestination(),
+												   wire_x, wire_x});
+					}
+				}
+				else if (!cable_runs.isEmpty() && !cable_runs.last().name.isEmpty()) {
+						//A terminal without cable end the current run
+					cable_runs.append(CableRun{QString(), QString(), wire_x, wire_x});
+				}
+
+					//Draw the wire under the terminal and its texts
 				const auto wire_string{shared_real_terminal->conductor()};
-				if (!wire_string.isEmpty())
+				const auto arrival_string{shared_real_terminal->arrival()};
+				const auto core_string{shared_real_terminal->cableWire()};
+				if (!wire_string.isEmpty() || !arrival_string.isEmpty() ||
+					!core_string.isEmpty() || !cable_name.isEmpty())
 				{
 					painter->save();
-					const QPointF wire_p1{terminal_rect.width()/2, terminal_rect.y() + terminal_rect.height()};
-					const QPointF wire_p2{terminal_rect.width()/2, strip_height + wire_line_length};
-					painter->drawLine(wire_p1, wire_p2);
+					const auto line_x{terminal_rect.width()/2};
+					painter->drawLine(QPointF{line_x, terminal_rect.y() + terminal_rect.height()},
+									  QPointF{line_x, cable_name.isEmpty() ? zones_bottom : bar_y});
 
-					wire_rect.setRect(0, strip_height + wire_line_length,
-									  terminal_rect.width(), wire_text_height - wire_line_length);
-					painter->translate(wire_rect.bottomLeft());
-					painter->rotate(270);
-					wire_rect.setRect(0, 0, wire_rect.height(), wire_rect.width());
-					painter->drawText(wire_rect, wire_string, wire_text_option);
-
-					if (m_preview_draw)
+					qreal y_{zones_top};
+					const auto draw_zone = [&](const QString &text, qreal zone_height)
 					{
-						painter->setPen(Qt::blue);
-						painter->drawRect(wire_rect);
-					}
+						if (zone_height <= 0) {
+							return;
+						}
+						if (!text.isEmpty())
+						{
+							painter->save();
+							QRectF rect_{0, y_, line_x - 1, zone_height};
+							painter->translate(rect_.bottomLeft());
+							painter->rotate(270);
+							rect_.setRect(0, 0, rect_.height(), rect_.width());
+							painter->drawText(rect_, text, below_text_option);
+							if (m_preview_draw) {
+								painter->setPen(Qt::blue);
+								painter->drawRect(rect_);
+							}
+							painter->restore();
+						}
+						y_ += zone_height;
+					};
+					draw_zone(wire_string, zones_.wire);
+					draw_zone(arrival_string, zones_.arrival);
+					draw_zone(core_string, zones_.core);
 					painter->restore();
 				}
 
@@ -296,6 +340,56 @@ void TerminalStripDrawer::paint(QPainter *painter)
 			physical_index++;
         }
         painter->restore();
+
+			//Draw the cables: a bar joining the wires, the tag with the
+			//name of the cable and its destination at the end
+		painter->save();
+		painter->setFont(m_pattern->font());
+		const QFontMetricsF metrics{painter->font()};
+		qreal last_right{-1e9};
+		for (const auto &run : qAsConst(cable_runs))
+		{
+			if (run.name.isEmpty()) {
+				continue;
+			}
+			painter->save();
+			auto pen_{painter->pen()};
+			pen_.setWidth(2);
+			painter->setPen(pen_);
+			painter->drawLine(QPointF{run.x1, bar_y}, QPointF{run.x2, bar_y});
+			pen_.setWidth(1);
+			painter->setPen(pen_);
+			const auto center_x{(run.x1 + run.x2)/2};
+
+			const auto tag_w{metrics.horizontalAdvance(run.name) + 8};
+			const auto tag_h{metrics.height() + 4};
+			const auto dest_w{run.destination.isEmpty() ? 0 : metrics.horizontalAdvance(run.destination)};
+			const auto half_w{qMax(tag_w, dest_w)/2};
+			qreal tag_y{bar_y + 8};
+				//Two cables side by side: the second one goes lower
+				//so the texts don't overlap
+			if (center_x - half_w < last_right + 2) {
+				tag_y += tag_h + 2;
+				last_right = -1e9;
+			} else {
+				last_right = center_x + half_w;
+			}
+			painter->drawLine(QPointF{center_x, bar_y}, QPointF{center_x, tag_y});
+
+			const QRectF tag{center_x - tag_w/2, tag_y, tag_w, tag_h};
+			painter->setBrush(Qt::white);
+			painter->drawRect(tag);
+			painter->drawText(tag, Qt::AlignCenter, run.name);
+
+			if (!run.destination.isEmpty())
+			{
+				painter->drawLine(QPointF{center_x, tag.bottom()}, QPointF{center_x, tag.bottom() + 8});
+				const QRectF dest_rect{center_x - dest_w/2 - 2, tag.bottom() + 8, dest_w + 4, metrics.height() + 2};
+				painter->drawText(dest_rect, Qt::AlignHCenter | Qt::AlignTop, run.destination);
+			}
+			painter->restore();
+		}
+		painter->restore();
 
 			//Draw the bridges
 		for (const auto &points_ : qAsConst(bridges_anchor_points))
@@ -371,9 +465,37 @@ hoverTerminal TerminalStripDrawer::hoveredXref() const
 qreal TerminalStripDrawer::height() const
 {
 	if (m_pattern) {
-		return stripHeight() + m_pattern->m_wire_text_height;
+		const auto zones_{belowZones()};
+		return stripHeight() + 6 + zones_.wire + zones_.arrival + zones_.core + zones_.cable;
 	}
 	return 0;
+}
+
+/**
+ * @brief TerminalStripDrawer::belowZones
+ * @return the height of each zone drawn under the strip, 0 for a zone
+ * not used by any terminal of the strip
+ */
+BelowZones TerminalStripDrawer::belowZones() const
+{
+	BelowZones zones_;
+	if (!m_pattern || !m_strip) {
+		return zones_;
+	}
+	for (const auto &physical_t : m_strip->physicalTerminal())
+	{
+		for (const auto &real_t : physical_t->realTerminals())
+		{
+			if (!real_t) {
+				continue;
+			}
+			if (!real_t->conductor().isEmpty()) zones_.wire    = m_pattern->m_wire_text_height;
+			if (!real_t->arrival().isEmpty())   zones_.arrival = m_pattern->m_arrival_text_height;
+			if (!real_t->cableWire().isEmpty()) zones_.core    = m_pattern->m_core_text_height;
+			if (!real_t->cable().isEmpty())     zones_.cable   = m_pattern->m_cable_height;
+		}
+	}
+	return zones_;
 }
 
 /**

@@ -30,6 +30,7 @@
 #include "../UndoCommand/bridgeterminalscommand.h"
 #include "../UndoCommand/changeterminalstripcolor.h"
 #include "../physicalterminal.h"
+#include "../realterminal.h"
 #include "../terminalstripbridge.h"
 
 /**
@@ -198,6 +199,18 @@ void TerminalStripEditor::apply()
 					current_data.setTerminalFunction(data_.function_);
 					current_data.setTerminalLED(data_.led_);
 					current_data.m_informations.addValue(QStringLiteral("label"), data_.label_);
+						//Cable data: an empty value is removed from the informations
+					const QVector<QPair<QString, QString>> cable_values{
+						{RealTerminal::cableKey(), data_.cable_},
+						{RealTerminal::cableWireKey(), data_.cable_wire},
+						{RealTerminal::cableDestinationKey(), data_.cable_destination}};
+					for (const auto &pair_ : cable_values) {
+						if (pair_.second.isEmpty()) {
+							current_data.m_informations.remove(pair_.first);
+						} else {
+							current_data.m_informations.addValue(pair_.first, pair_.second);
+						}
+					}
 
 					if (element->elementData() != current_data)
 						m_project->undoStack()->push(new ChangeElementDataCommand(element, current_data));

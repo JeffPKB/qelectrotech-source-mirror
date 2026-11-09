@@ -60,6 +60,10 @@ namespace TerminalStripDrawer
             AbstractBridgeInterface* bridge() const override;
 			QString xref() const override;
 			QString conductor() const override;
+			QString cable() const override;
+			QString cableWire() const override;
+			QString cableDestination() const override;
+			QString arrival() const override;
 
 		private:
 			QSharedPointer<RealTerminal> m_real;

@@ -20,6 +20,7 @@
 #include "../qetgraphicsitem/terminalelement.h"
 #include "physicalterminal.h"
 #include "../qetgraphicsitem/conductor.h"
+#include "../qetgraphicsitem/terminal.h"
 
 /**
  * @brief RealTerminal
@@ -160,6 +161,9 @@ QString RealTerminal::Xref() const
  * @return
  */
 QString RealTerminal::cable() const {
+	if (m_element) {
+		return m_element->elementInformations().value(cableKey()).toString();
+	}
 	return QString();
 }
 
@@ -168,6 +172,114 @@ QString RealTerminal::cable() const {
  * @return
  */
 QString RealTerminal::cableWire() const {
+	if (m_element) {
+		return m_element->elementInformations().value(cableWireKey()).toString();
+	}
+	return QString();
+}
+
+/**
+ * @brief RealTerminal::cableDestination
+ * @return where the cable of this terminal goes (a box, a desk...)
+ */
+QString RealTerminal::cableDestination() const {
+	if (m_element) {
+		return m_element->elementInformations().value(cableDestinationKey()).toString();
+	}
+	return QString();
+}
+
+namespace {
+		/**
+		 * Return "label:terminal" of the element at the other end of
+		 * @a conductor, seen from @a from. A folio report is crossed to reach
+		 * the element on the other folio.
+		 */
+	QString farEnd(Conductor *conductor, Terminal *from, int depth = 0)
+	{
+		if (!conductor || depth > 3) {
+			return QString();
+		}
+		auto far_terminal{conductor->terminal1 == from ? conductor->terminal2
+													  : conductor->terminal1};
+		if (!far_terminal) {
+			return QString();
+		}
+		auto far_element{far_terminal->parentElement()};
+		if (!far_element) {
+			return QString();
+		}
+
+			//Cross the folio report
+		if (far_element->linkType() & Element::AllReport)
+		{
+			const auto linked_{far_element->linkedElements()};
+			if (!linked_.isEmpty())
+			{
+				auto other_report{linked_.first()};
+				for (const auto &t : other_report->terminals()) {
+					for (const auto &c : t->conductors()) {
+						const auto str_{farEnd(c, t, depth + 1)};
+						if (!str_.isEmpty()) {
+							return str_;
+						}
+					}
+				}
+			}
+			return QString();
+		}
+
+		auto label_{far_element->actualLabel()};
+		if (label_.isEmpty()) {
+			label_ = far_element->name();
+		}
+		const auto terminal_name{far_terminal->name()};
+		if (terminal_name.isEmpty()) {
+			return label_;
+		}
+		return label_ + QLatin1Char(':') + terminal_name;
+	}
+}
+
+/**
+ * @brief RealTerminal::arrival
+ * @return the element (and its terminal) reached by the wire of the
+ * field side of this terminal, for example "-12M2:U".
+ * The field side is the connection point of the terminal element the
+ * lowest on the folio (the rightmost one if they are at the same height).
+ */
+QString RealTerminal::arrival() const
+{
+	if (!m_element) {
+		return QString();
+	}
+
+	Terminal *field_terminal{nullptr};
+	for (const auto &t : m_element->terminals())
+	{
+		if (!field_terminal) {
+			field_terminal = t;
+			continue;
+		}
+		const auto p{t->dockConductor()};
+		const auto best{field_terminal->dockConductor()};
+		if (p.y() > best.y() + 0.5 ||
+			(qAbs(p.y() - best.y()) <= 0.5 && p.x() > best.x())) {
+			field_terminal = t;
+		}
+	}
+
+	if (!field_terminal) {
+		return QString();
+	}
+
+	for (const auto &c : field_terminal->conductors())
+	{
+		const auto str_{farEnd(c, field_terminal)};
+		if (!str_.isEmpty()) {
+			return str_;
+		}
+	}
 	return QString();
 }
 

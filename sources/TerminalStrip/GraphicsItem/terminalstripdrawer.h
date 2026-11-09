@@ -46,6 +46,15 @@ namespace TerminalStripDrawer
             virtual QUuid uuid() const = 0;
     };
 
+		//Height of the zones drawn under the strip
+	struct BelowZones
+	{
+		qreal wire{0};
+		qreal arrival{0};
+		qreal core{0};
+		qreal cable{0};
+	};
+
     class AbstractRealTerminalInterface
     {
         public:
@@ -56,6 +65,10 @@ namespace TerminalStripDrawer
             virtual AbstractBridgeInterface* bridge() const = 0;
 			virtual QString xref() const = 0;
 			virtual QString conductor() const { return QString(); }
+			virtual QString cable() const { return QString(); }
+			virtual QString cableWire() const { return QString(); }
+			virtual QString cableDestination() const { return QString(); }
+			virtual QString arrival() const { return QString(); }
     };
 
 	class AbstractPhysicalTerminalInterface
@@ -100,6 +113,7 @@ namespace TerminalStripDrawer
         private:
             qreal height() const;
             qreal stripHeight() const;
+            BelowZones belowZones() const;
             qreal width() const;
 
         private:

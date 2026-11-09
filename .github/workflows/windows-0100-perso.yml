@@ -46,6 +46,7 @@ jobs:
             mingw-w64-ucrt-x86_64-qt5-translations
             mingw-w64-ucrt-x86_64-sqlite3
             mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-angleproject
             mingw-w64-ucrt-x86_64-extra-cmake-modules
 
       - name: Build with cmake
@@ -89,6 +90,19 @@ jobs:
           "$WINDEPLOY" --release --no-translations --no-compiler-runtime ./qelectrotech.exe || true
 
           # Copy every DLL of /ucrt64/bin the exe and the plugins depend on
+          # Qt plugins: copied by hand if windeployqt stopped before them
+          QT_PLUGINS=$(/ucrt64/bin/qmake-qt5 -query QT_INSTALL_PLUGINS 2>/dev/null || true)
+          [ -d "$QT_PLUGINS" ] || QT_PLUGINS=$(dirname "$(find /ucrt64 -path '*qt5*' -iname qwindows.dll | head -1)")/..
+          echo "Qt plugins: $QT_PLUGINS"
+          for d in platforms styles imageformats iconengines sqldrivers printsupport; do
+            if [ -d "$QT_PLUGINS/$d" ] && [ ! -d "$BIN/$d" ]; then
+              mkdir -p "$BIN/$d"
+              find "$QT_PLUGINS/$d" -maxdepth 1 -iname "*.dll" ! -iname "*d.dll" -exec cp {} "$BIN/$d/" \;
+              # keep the release dll whose name really ends with d (qsqlodbc...)
+              find "$QT_PLUGINS/$d" -maxdepth 1 -iname "*.dll" -exec sh -c '[ -f "$2/$(basename "$1")" ] || cp "$1" "$2/"' _ {} "$BIN/$d" \;
+            fi
+          done
+
           set +e
           for PASS in 1 2 3; do
             for f in "$BIN"/*.dll "$BIN"/*.exe "$BIN"/*/*.dll; do

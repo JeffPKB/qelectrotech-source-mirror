@@ -84,7 +84,12 @@ class TerminalStripLayoutPattern
 		Qt::Orientation m_xref_text_orientation {Qt::Vertical};
 
 			//Wire number, written under each terminal
-		qreal m_wire_text_height{60};
+		qreal m_wire_text_height{40};
+		qreal m_arrival_text_height{45};
+		qreal m_core_text_height{25};
+			//Cable drawn under the wires: the wires of the consecutive
+			//terminals of a same cable join a bar, with a tag under it
+		qreal m_cable_height{75};
 
         qreal m_bridge_point_d{5};
         QVector<qreal> m_bridge_point_y_offset{50,70,90,110};

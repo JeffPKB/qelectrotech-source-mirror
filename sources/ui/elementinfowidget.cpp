@@ -259,6 +259,20 @@ DiagramContext ElementInfoWidget::currentInfo() const
 		}
 	}
 
+		//Keep the informations this widget doesn't edit (the cable of
+		//a terminal set in the terminal strip editor), else they are lost
+	if (m_element)
+	{
+		const auto element_info{m_element->elementInformations()};
+		for (const auto &key : element_info.keys())
+		{
+			if (key.startsWith(QStringLiteral("terminal_cable")) &&
+				!info_.contains(key)) {
+				info_.addValue(key, element_info.value(key));
+			}
+		}
+	}
+
 	return info_;
 }
 

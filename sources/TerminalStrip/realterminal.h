@@ -65,6 +65,14 @@ class RealTerminal
 		QString Xref() const;
 		QString cable() const;
 		QString cableWire() const;
+		QString cableDestination() const;
+		QString arrival() const;
+
+			//Keys of the element informations of a terminal element
+			//used to store the cable data
+		static QString cableKey()            { return QStringLiteral("terminal_cable"); }
+		static QString cableWireKey()        { return QStringLiteral("terminal_cable_wire"); }
+		static QString cableDestinationKey() { return QStringLiteral("terminal_cable_destination"); }
 		QString conductor() const;
 
 		ElementData::TerminalType type() const;
