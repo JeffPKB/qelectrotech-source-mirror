@@ -20,6 +20,7 @@
 #include "../qetapp.h"
 
 #include <QFile>
+#include <QTextStream>
 #include <QProcess>
 #include <QMessageBox>
 #include <QRegularExpression>
@@ -206,4 +207,71 @@ void scaleElmt(QDomDocument &document, qreal factor)
 		}
 	};
 	scale_children(root);
+}
+
+/**
+ * @brief dxf2ElmtUnitScale
+ * dxf2elmt scales the drawing according to the unit declared in the
+ * header of the dxf ($INSUNITS) so that 1 mm = 2 points. QElectroTech 0.9
+ * (with the first versions of dxf2elmt) imported 1 unit = 1 point.
+ * @param file_path : the dxf file
+ * @return the scale applied by dxf2elmt to the dxf @a file_path
+ * (1 for a drawing without unit, or if the unit can't be read)
+ */
+qreal dxf2ElmtUnitScale(const QString &file_path)
+{
+	QFile file_(file_path);
+	if (!file_.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		return 1.0;
+	}
+
+		//Read the pairs "group code / value" of the HEADER section
+	int units_{0};
+	QTextStream stream_(&file_);
+	bool insunits_found{false};
+	while (!stream_.atEnd())
+	{
+		const auto code_{stream_.readLine().trimmed()};
+		if (stream_.atEnd()) {
+			break;
+		}
+		const auto value_{stream_.readLine().trimmed()};
+
+		if (code_ == QLatin1String("9") && value_ == QLatin1String("$INSUNITS")) {
+			insunits_found = true;
+		} else if (insunits_found && code_ == QLatin1String("70")) {
+			units_ = value_.toInt();
+			break;
+		} else if (code_ == QLatin1String("0") && value_ == QLatin1String("ENDSEC")) {
+				//End of the header: the unit is not declared
+			break;
+		}
+	}
+
+		//The factors of dxf2elmt (2 points per mm, in each unit)
+	switch (units_)
+	{
+		case 1:  return 50.8;               //inches
+		case 2:  return 609.6;              //feet
+		case 3:  return 3218694.4374;       //miles
+		case 4:  return 2.0;                //millimeters
+		case 5:  return 20.0;               //centimeters
+		case 6:  return 2000.0;             //meters
+		case 7:  return 2000000.0;          //kilometers
+		case 8:  return 50.8e-6;            //microinches
+		case 9:  return 0.0508;             //mils
+		case 10: return 1828.8;             //yards
+		case 11: return 2.0e-7;             //angstroms
+		case 12: return 2.0e-6;             //nanometers
+		case 13: return 0.002;              //microns
+		case 14: return 200.0;              //decimeters
+		case 15: return 20000.0;            //decameters
+		case 16: return 200000.0;           //hectometers
+		case 17: return 2.0e12;             //gigameters
+		case 21: return 609.6012192;        //US survey feet
+		case 22: return 50.8001016;         //US survey inch
+		case 23: return 1828.8036576;       //US survey yard
+		case 24: return 3218694.4374;       //US survey mile
+		default: return 1.0;                //unitless, or astronomical units...
+	}
 }
