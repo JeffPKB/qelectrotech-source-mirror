@@ -1,0 +1,134 @@
+name: Windows 0.100 perso
+
+# Builds the 0.100 stable version with the local fixes (terminal strip
+# font saved in the project, 9 px by default, wire numbers under the
+# terminals) and publishes a zip holding only the "bin" folder: it replaces
+# the "bin" folder of an existing QElectroTech 0.100 installation.
+
+on:
+  push:
+    branches: [qet-0.100-perso]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+
+      - name: Checkout the needed submodules
+        shell: bash
+        run: git submodule update --init --depth 1 SingleApplication pugixml
+
+      - name: Install MSYS2 with Qt5 / KF5
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-qt5-base
+            mingw-w64-ucrt-x86_64-qt5-svg
+            mingw-w64-ucrt-x86_64-qt5-tools
+            mingw-w64-ucrt-x86_64-qt5-translations
+            mingw-w64-ucrt-x86_64-sqlite3
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-kcoreaddons-qt5
+            mingw-w64-ucrt-x86_64-kwidgetsaddons-qt5
+            mingw-w64-ucrt-x86_64-extra-cmake-modules
+
+      - name: Build with cmake
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          mkdir build && cd build
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH=/ucrt64 \
+            -DQT_VERSION_MAJOR=5 \
+            -DBUILD_WITH_KF5=ON \
+            -DBUILD_KF5=OFF \
+            -DPACKAGE_TESTS=OFF \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
+            -DSQLite3_INCLUDE_DIR=/ucrt64/include \
+            -DSQLite3_LIBRARY=/ucrt64/lib/libsqlite3.dll.a \
+            ..
+          ninja -j"$(nproc)"
+
+      - name: Deploy exe + Qt + DLLs into bin/
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          BIN="$GITHUB_WORKSPACE/out/bin"
+          mkdir -p "$BIN"
+          EXE=$(find "$GITHUB_WORKSPACE/build" -maxdepth 3 -iname "qelectrotech.exe" | head -1)
+          [ -n "$EXE" ] || { echo "ERROR: qelectrotech.exe not built"; exit 1; }
+          cp "$EXE" "$BIN/qelectrotech.exe"
+
+          cd "$BIN"
+          WINDEPLOY=$(command -v windeployqt-qt5 || command -v windeployqt || true)
+          [ -z "$WINDEPLOY" ] && WINDEPLOY=$(find /ucrt64 -iname "windeployqt*.exe" | grep -v qt6 | head -1)
+          echo "windeployqt: $WINDEPLOY"
+          "$WINDEPLOY" --release --no-translations --no-compiler-runtime ./qelectrotech.exe || true
+
+          # Copy every DLL of /ucrt64/bin the exe and the plugins depend on
+          set +e
+          for PASS in 1 2 3; do
+            for f in "$BIN"/*.dll "$BIN"/*.exe "$BIN"/*/*.dll; do
+              [ -f "$f" ] || continue
+              while IFS= read -r line; do
+                dll=$(echo "$line" | awk '{print $3}')
+                [ -f "$dll" ] || continue
+                [ -f "$BIN/$(basename "$dll")" ] || cp "$dll" "$BIN/"
+              done < <(ldd "$f" 2>/dev/null | grep -i '/ucrt64/bin/')
+            done
+          done
+          set -e
+          cp -n /ucrt64/bin/libgcc_s_seh-1.dll /ucrt64/bin/libstdc++-6.dll /ucrt64/bin/libwinpthread-1.dll "$BIN/" || true
+          echo "DLLs: $(find "$BIN" -name '*.dll' | wc -l)"
+          ls "$BIN/platforms/qwindows.dll"
+
+      - name: Zip the bin folder
+        shell: pwsh
+        run: |
+          @"
+          QElectroTech 0.100 + corrections perso
+          - taille de police du gestionnaire de bornier enregistree dans le projet
+          - police 9 par defaut
+          - numeros de fil sous les bornes
+
+          Installation :
+          1. Fermer QElectroTech.
+          2. Dans C:\Program Files\QElectroTech, renommer le dossier "bin" en "bin_origine".
+          3. Copier le dossier "bin" de ce zip a sa place.
+          Pour revenir en arriere : supprimer "bin" et renommer "bin_origine" en "bin".
+          "@ | Out-File -Encoding utf8 out\LISEZ-MOI.txt
+          Compress-Archive -Path out\* -DestinationPath QElectroTech-0.100-perso-bin.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: QElectroTech-0.100-perso-bin
+          path: QElectroTech-0.100-perso-bin.zip
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v0.100-perso
+          name: QElectroTech 0.100 perso
+          prerelease: false
+          files: QElectroTech-0.100-perso-bin.zip

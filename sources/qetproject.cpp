@@ -972,6 +972,8 @@ QDomDocument QETProject::toXml()
 		//Write terminal strip to xml
 	if (m_terminal_strip_vector.count())
 	{
+		m_project_properties_handler.terminalStripLayoutHandler().toXml(project_root);
+
 		auto xml_strip = xml_doc.createElement(QStringLiteral("terminal_strips"));
 		for (auto &strip : m_terminal_strip_vector) {
 			xml_strip.appendChild(strip->toXml(xml_doc));
@@ -1423,6 +1425,10 @@ void QETProject::readProjectXml(QDomDocument &xml_project)
 
 		//Load the embedded elements collection
 	readElementsCollectionXml(xml_project);
+
+		//Load the layout of the terminal strip (font, size of cells...),
+		//before the diagrams because the terminal strip items use it
+	m_project_properties_handler.terminalStripLayoutHandler().fromXml(xml_project.documentElement());
 
 		//Load the diagrams
 	readDiagramsXml(xml_project);

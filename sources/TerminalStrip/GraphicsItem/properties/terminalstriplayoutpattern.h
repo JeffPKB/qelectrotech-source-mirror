@@ -18,6 +18,7 @@
 #ifndef TERMINALSTRIPLAYOUTPATTERN_H
 #define TERMINALSTRIPLAYOUTPATTERN_H
 
+#include <QDomElement>
 #include <QFont>
 #include <QRect>
 #include <QSize>
@@ -82,11 +83,19 @@ class TerminalStripLayoutPattern
 		qreal m_xref_text_y{95};
 		Qt::Orientation m_xref_text_orientation {Qt::Vertical};
 
+			//Wire number, written under each terminal
+		qreal m_wire_text_height{60};
+
         qreal m_bridge_point_d{5};
         QVector<qreal> m_bridge_point_y_offset{50,70,90,110};
 
 		QUuid m_uuid{QUuid::createUuid()};
 		QString m_name;
+
+			//Save / load of the layout in the project xml
+		QDomElement toXml(QDomDocument &document) const;
+		void fromXml(const QDomElement &layout_element);
+		static QString xmlTagName();
 
 	private:
 		void updateHeaderTextOption();

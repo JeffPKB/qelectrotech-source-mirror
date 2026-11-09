@@ -128,6 +128,15 @@ namespace TerminalStripDrawer
 		}
 	}
 
+	QString TrueRealTerminal::conductor() const
+	{
+		if (m_real) {
+			return m_real->conductor();
+		} else {
+			return QString{};
+		}
+	}
+
     TrueBridge::TrueBridge(QSharedPointer<TerminalStripBridge> bridge) :
         m_bridge { bridge }
     {}

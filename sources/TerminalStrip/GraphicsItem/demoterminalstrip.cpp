@@ -60,6 +60,10 @@ namespace TerminalStripDrawer
 				return m_xref;
 			}
 
+			QString conductor() const override {
+				return QStringLiteral("W") + m_xref;
+			}
+
         private:
 			QString m_label, m_xref;
             QUuid m_bridge;

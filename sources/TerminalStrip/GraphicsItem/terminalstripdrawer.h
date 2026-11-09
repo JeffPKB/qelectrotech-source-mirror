@@ -55,6 +55,7 @@ namespace TerminalStripDrawer
             virtual bool isBridged() const = 0;
             virtual AbstractBridgeInterface* bridge() const = 0;
 			virtual QString xref() const = 0;
+			virtual QString conductor() const { return QString(); }
     };
 
 	class AbstractPhysicalTerminalInterface
@@ -98,6 +99,7 @@ namespace TerminalStripDrawer
 
         private:
             qreal height() const;
+            qreal stripHeight() const;
             qreal width() const;
 
         private:

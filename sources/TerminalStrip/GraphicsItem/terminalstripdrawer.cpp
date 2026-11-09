@@ -117,6 +117,15 @@ void TerminalStripDrawer::paint(QPainter *painter)
 		const auto xref_text_y{m_pattern->m_xref_text_y};
 		QRectF xref_rect;
 
+			//Wire numbers are written under the strip, the wire goes
+			//from the bottom of the terminal to the number.
+		const auto strip_height{stripHeight()};
+		const auto wire_text_height{m_pattern->m_wire_text_height};
+		const qreal wire_line_length{8};
+		QTextOption wire_text_option{Qt::AlignRight | Qt::AlignVCenter};
+		wire_text_option.setWrapMode(QTextOption::NoWrap);
+		QRectF wire_rect;
+
 		QHash<QUuid, QVector<QPointF>> bridges_anchor_points;
 
 		m_hovered_xref = hoverTerminal{};
@@ -234,6 +243,30 @@ void TerminalStripDrawer::paint(QPainter *painter)
 				}
 				painter->restore();
 
+					//Draw the wire number
+				const auto wire_string{shared_real_terminal->conductor()};
+				if (!wire_string.isEmpty())
+				{
+					painter->save();
+					const QPointF wire_p1{terminal_rect.width()/2, terminal_rect.y() + terminal_rect.height()};
+					const QPointF wire_p2{terminal_rect.width()/2, strip_height + wire_line_length};
+					painter->drawLine(wire_p1, wire_p2);
+
+					wire_rect.setRect(0, strip_height + wire_line_length,
+									  terminal_rect.width(), wire_text_height - wire_line_length);
+					painter->translate(wire_rect.bottomLeft());
+					painter->rotate(270);
+					wire_rect.setRect(0, 0, wire_rect.height(), wire_rect.width());
+					painter->drawText(wire_rect, wire_string, wire_text_option);
+
+					if (m_preview_draw)
+					{
+						painter->setPen(Qt::blue);
+						painter->drawRect(wire_rect);
+					}
+					painter->restore();
+				}
+
                     //Add bridge anchor
                 if (shared_real_terminal->isBridged())
                 {
@@ -331,7 +364,23 @@ hoverTerminal TerminalStripDrawer::hoveredXref() const
 	return m_hovered_xref;
 }
 
+/**
+ * @brief TerminalStripDrawer::height
+ * @return the height of the strip plus the room of the wire numbers
+ */
 qreal TerminalStripDrawer::height() const
+{
+	if (m_pattern) {
+		return stripHeight() + m_pattern->m_wire_text_height;
+	}
+	return 0;
+}
+
+/**
+ * @brief TerminalStripDrawer::stripHeight
+ * @return the height of the strip itself (header, spacer and terminals)
+ */
+qreal TerminalStripDrawer::stripHeight() const
 {
 	if (m_pattern)
 	{
