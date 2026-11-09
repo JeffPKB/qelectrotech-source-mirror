@@ -84,6 +84,11 @@ class TerminalStripLayoutPattern
 		Qt::Orientation m_xref_text_orientation {Qt::Vertical};
 
 			//Wire number, written under each terminal
+			//Symbol of the type of terminal (fuse, sectional, diode, ground),
+			//between the label and the xref
+		qreal m_type_symbol_y{94};
+		qreal m_type_symbol_height{12};
+
 		qreal m_wire_text_height{40};
 		qreal m_arrival_text_height{45};
 		qreal m_core_text_height{25};

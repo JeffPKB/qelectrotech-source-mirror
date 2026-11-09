@@ -206,6 +206,13 @@ void TerminalStripDrawer::paint(QPainter *painter)
 
 				painter->restore();
 
+					//Draw the symbol of the type of terminal
+				if (shared_real_terminal) {
+					drawSymbol(painter, shared_real_terminal->symbol(),
+							   QRectF{0, m_pattern->m_type_symbol_y,
+									  terminal_rect.width(), m_pattern->m_type_symbol_height});
+				}
+
 					//Draw xref
 				xref_rect.setRect(0, xref_text_y, terminal_rect.width(), xref_text_height);
 				painter->save();
@@ -469,6 +476,72 @@ qreal TerminalStripDrawer::height() const
 		return stripHeight() + 6 + zones_.wire + zones_.arrival + zones_.core + zones_.cable;
 	}
 	return 0;
+}
+
+/**
+ * @brief TerminalStripDrawer::drawSymbol
+ * Draw in @a rect the symbol of a terminal of type @a symbol,
+ * along the vertical axis of the terminal. Nothing for a generic terminal.
+ */
+void TerminalStripDrawer::drawSymbol(QPainter *painter, TerminalSymbol symbol, const QRectF &rect) const
+{
+	if (symbol == TerminalSymbol::Generic) {
+		return;
+	}
+
+	painter->save();
+	auto pen_{painter->pen()};
+	pen_.setWidthF(1);
+	pen_.setColor(Qt::black);
+	painter->setPen(pen_);
+	painter->setBrush(Qt::NoBrush);
+
+	const auto cx{rect.center().x()};
+	const auto top{rect.top()};
+	const auto bottom{rect.bottom()};
+	const auto h{rect.height()};
+
+	switch (symbol)
+	{
+		case TerminalSymbol::Fuse:
+		{
+				//A rectangle crossed by the wire
+			painter->drawRect(QRectF{cx - 2.5, top + 1, 5, h - 2});
+			painter->drawLine(QPointF{cx, top - 1}, QPointF{cx, bottom + 1});
+			break;
+		}
+		case TerminalSymbol::Sectional:
+		{
+				//The wire with two bars across it
+			painter->drawLine(QPointF{cx, top}, QPointF{cx, bottom});
+			pen_.setWidthF(1.5);
+			painter->setPen(pen_);
+			painter->drawLine(QPointF{cx - 3.5, top + h*0.3}, QPointF{cx + 3.5, top + h*0.3});
+			painter->drawLine(QPointF{cx - 3.5, top + h*0.7}, QPointF{cx + 3.5, top + h*0.7});
+			break;
+		}
+		case TerminalSymbol::Diode:
+		{
+				//A white dot with a black outline (a black dot would look
+				//like the point of a bridge)
+			painter->setBrush(Qt::white);
+			painter->drawEllipse(rect.center(), 3, 3);
+			break;
+		}
+		case TerminalSymbol::Ground:
+		{
+				//The ground symbol: a stem and three bars
+			const auto y0{top + h*0.45};
+			painter->drawLine(QPointF{cx, top}, QPointF{cx, y0});
+			painter->drawLine(QPointF{cx - 5, y0}, QPointF{cx + 5, y0});
+			painter->drawLine(QPointF{cx - 3.2, y0 + 2.5}, QPointF{cx + 3.2, y0 + 2.5});
+			painter->drawLine(QPointF{cx - 1.4, y0 + 5}, QPointF{cx + 1.4, y0 + 5});
+			break;
+		}
+		default:
+			break;
+	}
+	painter->restore();
 }
 
 /**

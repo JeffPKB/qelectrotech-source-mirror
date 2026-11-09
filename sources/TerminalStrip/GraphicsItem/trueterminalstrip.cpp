@@ -157,6 +157,20 @@ namespace TerminalStripDrawer
 		return m_real ? m_real->arrival() : QString{};
 	}
 
+	TerminalSymbol TrueRealTerminal::symbol() const
+	{
+		if (!m_real) {
+			return TerminalSymbol::Generic;
+		}
+		switch (m_real->type()) {
+			case ElementData::TTFuse:      return TerminalSymbol::Fuse;
+			case ElementData::TTSectional: return TerminalSymbol::Sectional;
+			case ElementData::TTDiode:     return TerminalSymbol::Diode;
+			case ElementData::TTGround:    return TerminalSymbol::Ground;
+			default:                       return TerminalSymbol::Generic;
+		}
+	}
+
     TrueBridge::TrueBridge(QSharedPointer<TerminalStripBridge> bridge) :
         m_bridge { bridge }
     {}

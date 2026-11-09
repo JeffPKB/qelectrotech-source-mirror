@@ -46,6 +46,9 @@ namespace TerminalStripDrawer
             virtual QUuid uuid() const = 0;
     };
 
+		//Symbol drawn in a terminal according to its type
+	enum class TerminalSymbol { Generic, Fuse, Sectional, Diode, Ground };
+
 		//Height of the zones drawn under the strip
 	struct BelowZones
 	{
@@ -69,6 +72,7 @@ namespace TerminalStripDrawer
 			virtual QString cableWire() const { return QString(); }
 			virtual QString cableDestination() const { return QString(); }
 			virtual QString arrival() const { return QString(); }
+			virtual TerminalSymbol symbol() const { return TerminalSymbol::Generic; }
     };
 
 	class AbstractPhysicalTerminalInterface
@@ -114,6 +118,7 @@ namespace TerminalStripDrawer
             qreal height() const;
             qreal stripHeight() const;
             BelowZones belowZones() const;
+            void drawSymbol(QPainter *painter, TerminalSymbol symbol, const QRectF &rect) const;
             qreal width() const;
 
         private:

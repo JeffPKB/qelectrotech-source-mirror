@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with QElectroTech.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include <QTimer>
 #include "terminalstripitem.h"
 
 
@@ -49,6 +50,7 @@ TerminalStripItem::TerminalStripItem(QGraphicsItem *parent) :
 
 void TerminalStripItem::setTerminalStrip(TerminalStrip *strip)
 {
+	prepareGeometryChange();
 	m_strip = strip;
 	m_drawer.setStrip(QSharedPointer<TerminalStripDrawer::TrueTerminalStrip> {
 						  new TerminalStripDrawer::TrueTerminalStrip { strip }});
@@ -73,6 +75,19 @@ void TerminalStripItem::paint(QPainter *painter, const QStyleOptionGraphicsItem 
 	Q_UNUSED(widget)
 
 	m_drawer.paint(painter);
+
+		//The size of the strip change when terminals, cables... are
+		//added or removed: tell it to the scene, else only the old
+		//area is redrawn
+	const auto br_{boundingRect()};
+	if (br_ != m_last_bounding_rect)
+	{
+		m_last_bounding_rect = br_;
+		QTimer::singleShot(0, this, [this]() {
+			prepareGeometryChange();
+			update();
+		});
+	}
 
 	if (isSelected() || isHovered())
 	{

@@ -81,6 +81,14 @@ namespace TerminalStripDrawer
 				return QString();
 			}
 
+			TerminalSymbol symbol() const override {
+				if (m_xref == QLatin1String("3_A1")) return TerminalSymbol::Fuse;
+				if (m_xref == QLatin1String("3_A2")) return TerminalSymbol::Sectional;
+				if (m_xref == QLatin1String("3_A3")) return TerminalSymbol::Diode;
+				if (m_xref == QLatin1String("3_A4")) return TerminalSymbol::Ground;
+				return TerminalSymbol::Generic;
+			}
+
 			QString arrival() const override {
 				if (m_xref.startsWith(QLatin1Char('1'))) {
 					static const QStringList pins{QStringLiteral("U"), QStringLiteral("V"),

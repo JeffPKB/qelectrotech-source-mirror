@@ -59,6 +59,8 @@ class TerminalStripItem : public QetGraphicsItem
 		QPointer<TerminalStrip> m_strip;
         TerminalStripDrawer::TerminalStripDrawer m_drawer;
         QUuid m_pending_strip_uuid;
+	private:
+		QRectF m_last_bounding_rect;
 };
 
 #endif // TERMINALSTRIPITEM_H

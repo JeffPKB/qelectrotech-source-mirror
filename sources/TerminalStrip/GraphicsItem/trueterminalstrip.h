@@ -64,6 +64,7 @@ namespace TerminalStripDrawer
 			QString cableWire() const override;
 			QString cableDestination() const override;
 			QString arrival() const override;
+			TerminalSymbol symbol() const override;
 
 		private:
 			QSharedPointer<RealTerminal> m_real;
