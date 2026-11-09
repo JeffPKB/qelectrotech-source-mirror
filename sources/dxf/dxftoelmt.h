@@ -18,11 +18,13 @@
 #ifndef DXFTOELMT_H
 #define DXFTOELMT_H
 
+#include <QDomDocument>
 #include <QByteArray>
 
 class QWidget;
 
 QByteArray dxfToElmt(const QString &file_path);
+void scaleElmt(QDomDocument &document, qreal factor);
 QString dxf2ElmtDirPath();
 QString dxf2ElmtBinaryPath();
 bool dxf2ElmtIsPresent(bool install_dialog = true, QWidget *parent = nullptr);

@@ -47,6 +47,7 @@
 #include "../../newelementwizard.h"
 #include "../editorcommands.h"
 #include "../../dxf/dxftoelmt.h"
+#include <QInputDialog>
 #include "../../qet_elementscaler/qet_elementscaler.h"
 #include "../UndoCommand/openelmtcommand.h"
 
@@ -1483,12 +1484,31 @@ void QETElementEditor::on_m_import_dxf_triggered()
 		QMessageBox::information(this, tr("Avertissement"), tr("L'import d'un dxf volumineux peut prendre du temps \n"
 															   "veuillez patienter durant l'import..."));
 
+			//dxf2elmt converts 1 mm into 2 points, the old versions used by
+			//QElectroTech 0.9 did not: ask the scale, 50 % by default to
+			//get the size of the 0.9, the last value used is kept
+		QSettings settings;
+		bool ok_{false};
+		const auto scale_{QInputDialog::getDouble(
+				this,
+				tr("Échelle de l'import DXF"),
+				tr("Échelle de l'import (%) :\n"
+				   "50 % donne la même taille qu'avec QElectroTech 0.9\n"
+				   "pour un dessin en millimètres."),
+				settings.value(QStringLiteral("dxfimport/scale_percent"), 50.0).toDouble(),
+				1, 1000, 1, &ok_)};
+		if (!ok_) {
+			return;
+		}
+		settings.setValue(QStringLiteral("dxfimport/scale_percent"), scale_);
+
 		const QByteArray array_{dxfToElmt(file_path)};
 		if (array_.isEmpty()) {
 			return;
 		}
 		QDomDocument xml_;
 		xml_.setContent(array_);
+		scaleElmt(xml_, scale_ / 100.0);
 
 		m_elmt_scene->undoStack().push(new OpenElmtCommand(xml_, m_elmt_scene));
 	}
