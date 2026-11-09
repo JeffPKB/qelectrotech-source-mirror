@@ -46,6 +46,7 @@ jobs:
             mingw-w64-ucrt-x86_64-qt5-translations
             mingw-w64-ucrt-x86_64-sqlite3
             mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-extra-cmake-modules
 
       - name: Build with cmake
         shell: msys2 {0}
@@ -59,6 +60,8 @@ jobs:
             -DQT_VERSION_MAJOR=5 \
             -DBUILD_WITH_KF5=ON \
             -DBUILD_KF5=ON \
+            -DKF5_GIT_TAG=v5.116.0 \
+            -DBUILD_TESTING=OFF \
             -DPACKAGE_TESTS=OFF \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
             -DSQLite3_INCLUDE_DIR=/ucrt64/include \
