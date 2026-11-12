@@ -133,6 +133,8 @@ void TerminalStripEditor::setCurrentStrip(TerminalStrip *strip_)
 		{
 			m_model = new TerminalStripModel{strip_, this};
 			ui->m_table_widget->setModel(m_model);
+				//The arrival of the wires is not used any more
+			ui->m_table_widget->setColumnHidden(TerminalStripModel::Arrival, true);
 			m_model->buildBridgePixmap(setUpBridgeCellWidth());
 			connect(ui->m_table_widget->selectionModel(), &QItemSelectionModel::selectionChanged, this, &TerminalStripEditor::selectionChanged);
 		}
