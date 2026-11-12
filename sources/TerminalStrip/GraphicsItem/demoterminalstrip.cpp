@@ -102,16 +102,10 @@ namespace TerminalStripDrawer
 			}
 
 			QString arrivalTop() const override {
-				return QStringLiteral("-KM") + m_xref.left(1) + QLatin1Char(':') + m_xref.right(1);
+				return QString();
 			}
 
 			QString arrival() const override {
-				if (m_xref.startsWith(QLatin1Char('1'))) {
-					static const QStringList pins{QStringLiteral("U"), QStringLiteral("V"),
-												  QStringLiteral("W"), QStringLiteral("PE")};
-					return QStringLiteral("-12M2:") + pins.value(m_xref.right(1).toInt() - 1);
-				}
-				if (m_xref.startsWith(QLatin1Char('2'))) return QStringLiteral("X-AU:") + m_xref.right(1);
 				return QString();
 			}
 

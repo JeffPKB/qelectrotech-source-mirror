@@ -152,7 +152,10 @@ namespace TerminalStripDrawer
 
 	QString TrueRealTerminal::arrivalTop() const
 	{
-		return m_real ? m_real->arrivalTop() : QString{};
+			//The element reached by the wire is not written on the strip
+			//any more (its name is too long): the wire number and the
+			//position of the terminal are enough. Still in the editor table.
+		return QString{};
 	}
 
 	QString TrueRealTerminal::cable() const
@@ -172,7 +175,10 @@ namespace TerminalStripDrawer
 
 	QString TrueRealTerminal::arrival() const
 	{
-		return m_real ? m_real->arrival() : QString{};
+			//The element reached by the wire is not written on the strip
+			//any more (its name is too long): the wire number and the
+			//position of the terminal are enough. Still in the editor table.
+		return QString{};
 	}
 
 	QString TrueRealTerminal::cableType() const

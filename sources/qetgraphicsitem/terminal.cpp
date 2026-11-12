@@ -779,6 +779,16 @@ QList<Terminal *> relatedPotentialTerminal (
 	// If terminal parent element is a Terminal element.
 	else if (terminal -> parentElement() -> linkType() & Element::Terminale)
 	{
+			//A fuse, a sectional or a diode terminal separates the
+			//potential of its two sides: the wires on the top and on the
+			//bottom can have different numbers
+		const auto type_{terminal->parentElement()->elementData().terminalType()};
+		if (type_ == ElementData::TTFuse ||
+			type_ == ElementData::TTSectional ||
+			type_ == ElementData::TTDiode) {
+			return QList<Terminal *>();
+		}
+
 		QList <Terminal *> terminals = terminal->parentElement()->terminals();
 		terminals.removeAll(const_cast<Terminal *>(terminal));
 		return terminals;
