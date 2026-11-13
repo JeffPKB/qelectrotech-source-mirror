@@ -24,6 +24,25 @@
 #include "../ui_elementinfowidget.h"
 #include "../undocommand/changeelementinformationcommand.h"
 #include "elementinfopartwidget.h"
+#include "../qeticons.h"
+
+#include <QApplication>
+#include <QClipboard>
+#include <QHBoxLayout>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QMimeData>
+#include <QPushButton>
+
+namespace {
+		//Format of the informations of an element in the clipboard
+	const QString INFO_MIME_TYPE{QStringLiteral("application/x-qet-element-informations")};
+
+		//The label and the formula belong to each element: never copied
+	bool isCopiedKey(const QString &key) {
+		return key != QETInformation::ELMT_LABEL && key != QETInformation::ELMT_FORMULA;
+	}
+}
 
 /**
 	@brief ElementInfoWidget::ElementInfoWidget
@@ -185,6 +204,21 @@ void ElementInfoWidget::buildInterface()
 		keys = QETInformation::elementInfoKeys();
 	}
 
+		//Copy / paste all the informations (except label and formula) from
+		//an element to another one
+	auto buttons_layout_{new QHBoxLayout};
+	auto copy_button_{new QPushButton(QET::Icons::EditCopy, tr("Copier les informations"), this)};
+	auto paste_button_{new QPushButton(QET::Icons::EditPaste, tr("Coller les informations"), this)};
+	copy_button_->setToolTip(tr("Copie toutes les informations de cet élément (installation, "
+								"localisation, commentaire, fonction...), sauf le label et la formule"));
+	paste_button_->setToolTip(tr("Remplace les informations de cet élément par celles copiées, "
+								 "sauf le label et la formule"));
+	connect(copy_button_, &QPushButton::clicked, this, &ElementInfoWidget::copyInformations);
+	connect(paste_button_, &QPushButton::clicked, this, &ElementInfoWidget::pasteInformations);
+	buttons_layout_->addWidget(copy_button_);
+	buttons_layout_->addWidget(paste_button_);
+	ui->scroll_vlayout->addLayout(buttons_layout_);
+
 	for (auto str : keys)
 	{
 		ElementInfoPartWidget *eipw = new ElementInfoPartWidget(str, QETInformation::translatedInfoKey(str), this);
@@ -310,4 +344,59 @@ void ElementInfoWidget::elementInfoChange()
 
 	if(current_info != elmt_info)
 		updateUi();
+}
+
+/**
+	@brief ElementInfoWidget::copyInformations
+	Copy in the clipboard all the informations currently edited, except the
+	label and the formula which belong to each element. The empty
+	informations are copied too, so the paste gives the same informations.
+*/
+void ElementInfoWidget::copyInformations()
+{
+	QJsonObject json_;
+	QStringList text_;
+	for (const auto &eipw : qAsConst(m_eipw_list))
+	{
+		if (!isCopiedKey(eipw->key())) {
+			continue;
+		}
+		json_.insert(eipw->key(), eipw->text());
+		if (!eipw->text().isEmpty()) {
+			text_ << QETInformation::translatedInfoKey(eipw->key()) + QStringLiteral(" : ") + eipw->text();
+		}
+	}
+
+	auto mime_data_{new QMimeData};
+	mime_data_->setData(INFO_MIME_TYPE, QJsonDocument(json_).toJson(QJsonDocument::Compact));
+	mime_data_->setText(text_.join(QLatin1Char('\n')));
+	QApplication::clipboard()->setMimeData(mime_data_);
+}
+
+/**
+	@brief ElementInfoWidget::pasteInformations
+	Replace the informations currently edited by the ones copied with
+	copyInformations, except the label and the formula.
+	In live edit, the paste is one undo command.
+*/
+void ElementInfoWidget::pasteInformations()
+{
+	const auto mime_data_{QApplication::clipboard()->mimeData()};
+	if (!mime_data_ || !mime_data_->hasFormat(INFO_MIME_TYPE)) {
+		return;
+	}
+	const auto json_{QJsonDocument::fromJson(mime_data_->data(INFO_MIME_TYPE)).object()};
+
+	if (m_live_edit) disableLiveEdit();
+	for (const auto &eipw : qAsConst(m_eipw_list))
+	{
+		if (isCopiedKey(eipw->key()) && json_.contains(eipw->key())) {
+			eipw->setText(json_.value(eipw->key()).toString());
+		}
+	}
+	if (m_live_edit)
+	{
+		enableLiveEdit();
+		apply();
+	}
 }
