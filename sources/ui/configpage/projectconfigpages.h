@@ -20,6 +20,8 @@
 #include "configpage.h"
 
 class QLabel;
+class QPushButton;
+class QDateEdit;
 class QLineEdit;
 class QETProject;
 class BorderPropertiesWidget;
@@ -89,6 +91,9 @@ class ProjectConfigPage : public ConfigPage {
 */
 class ProjectMainConfigPage : public ProjectConfigPage {
 	Q_OBJECT
+	signals:
+	void projectRestarted();
+
 	// Constructor, destructor
 	public:
 	ProjectMainConfigPage(QETProject *, QWidget * = nullptr);
@@ -116,6 +121,20 @@ class ProjectMainConfigPage : public ProjectConfigPage {
 	QLabel *title_information_;
 	QLabel *project_variables_label_;
 	DiagramContextWidget *project_variables_;
+	QPushButton *m_save_defaults_button{nullptr};
+	QPushButton *m_load_defaults_button{nullptr};
+	QDateEdit *m_folios_date{nullptr};
+	QPushButton *m_today_button{nullptr};
+	QPushButton *m_apply_date_button{nullptr};
+	QPushButton *m_restart_button{nullptr};
+
+	private:
+	void applyDateToAllFolios();
+
+	public:
+	static bool restartFromProject(QETProject *project, QWidget *parent);
+	void saveAsDefaults();
+	void loadDefaults();
 };
 
 class ProjectAutoNumConfigPage : public ProjectConfigPage {

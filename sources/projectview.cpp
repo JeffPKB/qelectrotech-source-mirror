@@ -15,6 +15,7 @@
 	You should have received a copy of the GNU General Public License
 	along with QElectroTech.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "ui/configpage/projectconfigpages.h"
 #include "projectview.h"
 
 #include "ElementsCollection/xmlelementcollection.h"
@@ -623,6 +624,9 @@ QETResult ProjectView::saveAs()
 	QString filepath = askUserForFilePath();
 	if (filepath.isEmpty()) return(QETResult());
 	if (copy_of_existing_project) {
+			//Usually a new machine from an existing one: offer to reset
+			//the date, the revisions... then show the project properties
+		ProjectMainConfigPage::restartFromProject(m_project, this);
 		editProjectProperties();
 	}
 	return(doSave());

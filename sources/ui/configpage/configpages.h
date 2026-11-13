@@ -52,6 +52,7 @@ public slots:
 	void setFolioAutonum(QString);
 	void saveCurrentTbp();
 	void loadSavedTbp();
+	void reloadTitleBlockFromProject();
 
 	
 	// methods

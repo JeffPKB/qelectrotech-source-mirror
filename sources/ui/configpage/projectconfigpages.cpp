@@ -15,6 +15,15 @@
 	You should have received a copy of the GNU General Public License
 	along with QElectroTech.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "../../diagram.h"
+#include <QVBoxLayout>
+#include <QDialogButtonBox>
+#include <QDialog>
+#include <QCheckBox>
+#include <QDateEdit>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QSettings>
 #include <QMessageBox>
 #include "projectconfigpages.h"
 
@@ -160,21 +169,32 @@ void ProjectMainConfigPage::applyProjectConf()
 	DiagramContext new_properties = project_variables_ -> context();
 	if (m_project -> projectProperties() != new_properties) {
 		const auto old_properties{m_project -> projectProperties()};
+		const auto folios_count_{m_project -> diagrams().count()};
+
+			//Ask before changing the existing folios: "No" keeps their old
+			//values (written in their own title block), only the new
+			//folios get the new ones
+		bool apply_to_folios{true};
+		if (folios_count_ > 0)
+		{
+			apply_to_folios = QMessageBox::question(
+					this,
+					tr("Variables du projet"),
+					tr("Appliquer les nouvelles valeurs des variables aux %n folio(s) existant(s) ?\n\n"
+					   "Non : les folios existants gardent leurs valeurs actuelles, "
+					   "seuls les nouveaux folios prendront les nouvelles.",
+					   "", folios_count_),
+					QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes;
+		}
+
+		if (!apply_to_folios) {
+			m_project -> keepVariablesOnFolios(old_properties, new_properties);
+		}
 		m_project -> setProjectProperties(new_properties);
 		modified_project = true;
-
-			//A folio with a custom field of the same name keeps its old
-			//value (it overrides the project variable): offer to update them
-		const auto count_{m_project -> foliosUsingVariables(old_properties, new_properties)};
-		if (count_ > 0 &&
-			QMessageBox::question(
-				this,
-				tr("Variables du projet"),
-				tr("%n folio(s) existant(s) ont leur propre valeur pour une variable modifiée "
-				   "et ne seront pas mis à jour.\n\nAppliquer aussi la nouvelle valeur à ces folios ?",
-				   "", count_),
-				QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) == QMessageBox::Yes)
-		{
+		if (apply_to_folios) {
+				//A folio with a custom field of the same name would keep
+				//its old value (it overrides the project variable)
 			m_project -> applyVariablesToFolios(old_properties, new_properties);
 		}
 	}
@@ -208,6 +228,102 @@ void ProjectMainConfigPage::initWidgets()
 	project_variables_label_ -> setWordWrap(true);
 	project_variables_ = new DiagramContextWidget();
 	project_variables_ -> setContext(DiagramContext());
+
+	m_save_defaults_button = new QPushButton(tr("Mémoriser pour les nouveaux projets"));
+	m_save_defaults_button -> setToolTip(
+		tr("Les variables ci-dessus et le cartouche par défaut de ce projet seront "
+		   "repris automatiquement à la création de chaque nouveau projet."));
+	connect(m_save_defaults_button, &QPushButton::clicked, this, &ProjectMainConfigPage::saveAsDefaults);
+
+	m_load_defaults_button = new QPushButton(tr("Reprendre les valeurs mémorisées"));
+	m_load_defaults_button -> setToolTip(
+		tr("Ajoute les variables mémorisées qui manquent à ce projet et remplit "
+		   "celles qui sont vides. Les valeurs déjà remplies sont gardées."));
+	connect(m_load_defaults_button, &QPushButton::clicked, this, &ProjectMainConfigPage::loadDefaults);
+
+		//Date of all the folios in one go
+	m_folios_date = new QDateEdit(QDate::currentDate());
+	m_folios_date -> setCalendarPopup(true);
+	m_folios_date -> setDisplayFormat(QStringLiteral("dd/MM/yyyy"));
+	m_today_button = new QPushButton(tr("Aujourd'hui"));
+	connect(m_today_button, &QPushButton::clicked, this, [this]() {
+		m_folios_date -> setDate(QDate::currentDate());
+	});
+	m_restart_button = new QPushButton(tr("Repartir de ce projet..."));
+	m_restart_button -> setToolTip(
+		tr("Pour une nouvelle machine à partir de ce projet : date du jour, "
+		   "tableau des indices vidé, indice de révision remis à zéro..."));
+	connect(m_restart_button, &QPushButton::clicked, this, [this]() {
+		if (restartFromProject(m_project, this)) {
+			readValuesFromProject();
+			emit projectRestarted();
+		}
+	});
+	m_apply_date_button = new QPushButton(tr("Appliquer à tous les folios"));
+	m_apply_date_button -> setToolTip(
+		tr("Met cette date dans le cartouche de tous les folios du projet et "
+		   "dans le cartouche par défaut (nouveaux folios)."));
+	connect(m_apply_date_button, &QPushButton::clicked, this, &ProjectMainConfigPage::applyDateToAllFolios);
+}
+
+/**
+	@brief ProjectMainConfigPage::applyDateToAllFolios
+	Write the chosen date in the title block of all the folios, after a
+	confirmation.
+*/
+void ProjectMainConfigPage::applyDateToAllFolios()
+{
+	const auto date_{m_folios_date -> date()};
+	const auto count_{m_project -> diagrams().count()};
+	if (QMessageBox::question(
+			this,
+			tr("Date des folios"),
+			tr("Mettre la date du %1 dans le cartouche des %n folio(s) du projet ?",
+			   "", count_).arg(date_.toString(QStringLiteral("dd/MM/yyyy"))),
+			QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes) != QMessageBox::Yes) {
+		return;
+	}
+	m_project -> setDateOnAllFolios(date_);
+}
+
+/**
+	@brief ProjectMainConfigPage::loadDefaults
+	Add to the variables edited the kept ones which are missing, and fill
+	the empty ones. The values already filled are kept.
+*/
+void ProjectMainConfigPage::loadDefaults()
+{
+	auto context_{project_variables_ -> context()};
+	const auto defaults_{QETProject::newProjectVariables()};
+	for (const auto &key : defaults_.keys())
+	{
+		if (!context_.contains(key) || context_.value(key).toString().isEmpty()) {
+			context_.addValue(key, defaults_.value(key));
+		}
+	}
+	project_variables_ -> setContext(context_);
+}
+
+/**
+	@brief ProjectMainConfigPage::saveAsDefaults
+	Keep the project variables currently edited and the default title
+	block of the project: a new project starts with them, instead of empty.
+*/
+void ProjectMainConfigPage::saveAsDefaults()
+{
+	QSettings settings;
+	settings.remove(QStringLiteral("newproject/variables"));
+	project_variables_ -> context().toSettings(settings, QStringLiteral("newproject/variables"));
+	m_project -> defaultTitleBlockProperties().toSettings(settings, QStringLiteral("diagrameditor/default"));
+
+	QMessageBox::information(
+		this,
+		tr("Nouveaux projets"),
+		tr("Les variables et le cartouche par défaut sont mémorisés : "
+		   "ils seront repris à la création de chaque nouveau projet.\n\n"
+		   "Si vous venez de modifier le cartouche par défaut dans l'onglet "
+		   "« Nouveau folio », validez d'abord les propriétés du projet, puis "
+		   "revenez cliquer sur ce bouton."));
 }
 
 /**
@@ -224,6 +340,21 @@ void ProjectMainConfigPage::initLayout()
 	main_layout0 -> addSpacing(10);
 	main_layout0 -> addWidget(project_variables_label_);
 	main_layout0 -> addWidget(project_variables_);
+	main_layout0 -> addSpacing(10);
+	QHBoxLayout *date_layout = new QHBoxLayout();
+	date_layout -> addWidget(new QLabel(tr("Date des folios :")));
+	date_layout -> addWidget(m_folios_date);
+	date_layout -> addWidget(m_today_button);
+	date_layout -> addWidget(m_apply_date_button);
+	date_layout -> addStretch();
+	main_layout0 -> addLayout(date_layout);
+
+	QHBoxLayout *defaults_layout = new QHBoxLayout();
+	defaults_layout -> addWidget(m_restart_button);
+	defaults_layout -> addStretch();
+	defaults_layout -> addWidget(m_load_defaults_button);
+	defaults_layout -> addWidget(m_save_defaults_button);
+	main_layout0 -> addLayout(defaults_layout);
 	setLayout(main_layout0);
 	this -> setMinimumWidth(680);
 
@@ -672,4 +803,100 @@ void ProjectAutoNumConfigPage::removeContextFolio()
 void ProjectAutoNumConfigPage::changeToTab(int i)
 {
 	qDebug()<<"Q_UNUSED"<<i;
+}
+
+/**
+	@brief ProjectMainConfigPage::restartFromProject
+	Start a new machine from an existing project: ask what to reset (date
+	of the folios, revision table A to G, revision index of the folios,
+	machine and document numbers) and do it.
+	@return true if something was reset
+*/
+bool ProjectMainConfigPage::restartFromProject(QETProject *project, QWidget *parent)
+{
+	if (!project) {
+		return false;
+	}
+
+	QDialog dialog_(parent);
+	dialog_.setWindowTitle(tr("Repartir de ce projet"));
+	auto layout_{new QVBoxLayout(&dialog_)};
+	auto info_{new QLabel(tr("Pour une nouvelle machine à partir de ce projet, remettre à zéro :"))};
+	info_ -> setWordWrap(true);
+	layout_ -> addWidget(info_);
+
+	auto date_cb_{new QCheckBox(tr("Date de tous les folios :"))};
+	date_cb_ -> setChecked(true);
+	auto date_edit_{new QDateEdit(QDate::currentDate())};
+	date_edit_ -> setCalendarPopup(true);
+	date_edit_ -> setDisplayFormat(QStringLiteral("dd/MM/yyyy"));
+	auto date_layout_{new QHBoxLayout};
+	date_layout_ -> addWidget(date_cb_);
+	date_layout_ -> addWidget(date_edit_);
+	date_layout_ -> addStretch();
+	layout_ -> addLayout(date_layout_);
+
+	auto revisions_cb_{new QCheckBox(tr("Vider le tableau des indices (A à G : modif, date, dessiné, vérifié)"))};
+	revisions_cb_ -> setChecked(true);
+	layout_ -> addWidget(revisions_cb_);
+	auto indexrev_cb_{new QCheckBox(tr("Remettre l'indice de révision des folios à zéro (vide)"))};
+	indexrev_cb_ -> setChecked(true);
+	layout_ -> addWidget(indexrev_cb_);
+	auto numbers_cb_{new QCheckBox(tr("Vider le numéro de machine et le numéro de document"))};
+	numbers_cb_ -> setChecked(true);
+	layout_ -> addWidget(numbers_cb_);
+
+	auto buttons_{new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel)};
+	connect(buttons_, &QDialogButtonBox::accepted, &dialog_, &QDialog::accept);
+	connect(buttons_, &QDialogButtonBox::rejected, &dialog_, &QDialog::reject);
+	layout_ -> addWidget(buttons_);
+
+	if (dialog_.exec() != QDialog::Accepted) {
+		return false;
+	}
+
+		//Project variables
+	const auto old_variables_{project -> projectProperties()};
+	auto new_variables_{old_variables_};
+	QStringList cleared_;
+	if (revisions_cb_ -> isChecked()) {
+		for (const auto &index : {"a", "b", "c", "d", "e", "f", "g"}) {
+			for (const auto &field : {"modif", "date", "dessine", "verifie"}) {
+				cleared_ << QString(index) + QLatin1Char('-') + QString(field);
+			}
+		}
+	}
+	if (numbers_cb_ -> isChecked()) {
+		cleared_ << QStringLiteral("nummachine") << QStringLiteral("document-n");
+	}
+	for (const auto &key : qAsConst(cleared_)) {
+		if (new_variables_.contains(key)) {
+			new_variables_.addValue(key, QString());
+		}
+	}
+	if (new_variables_ != old_variables_) {
+		project -> setProjectProperties(new_variables_);
+		project -> applyVariablesToFolios(old_variables_, new_variables_);
+	}
+
+		//Revision index of the folios and of the default title block
+	if (indexrev_cb_ -> isChecked())
+	{
+		auto default_tbp_{project -> defaultTitleBlockProperties()};
+		default_tbp_.indexrev.clear();
+		project -> setDefaultTitleBlockProperties(default_tbp_);
+		for (const auto &diagram_ : project -> diagrams())
+		{
+			auto tbp_{diagram_ -> border_and_titleblock.exportTitleBlock()};
+			tbp_.indexrev.clear();
+			diagram_ -> border_and_titleblock.importTitleBlock(tbp_);
+		}
+	}
+
+	if (date_cb_ -> isChecked()) {
+		project -> setDateOnAllFolios(date_edit_ -> date());
+	}
+
+	project -> setModified(true);
+	return true;
 }

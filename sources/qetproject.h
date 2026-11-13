@@ -179,8 +179,11 @@ class QETProject : public QObject
 		bool projectWasModified();
 		bool projectOptionsWereModified();
 		DiagramContext projectProperties();
+		static DiagramContext newProjectVariables();
 		int foliosUsingVariables(const DiagramContext &old_context, const DiagramContext &new_context) const;
 		int applyVariablesToFolios(const DiagramContext &old_context, const DiagramContext &new_context);
+		int keepVariablesOnFolios(const DiagramContext &old_context, const DiagramContext &new_context);
+		void setDateOnAllFolios(const QDate &date);
 		int foliosUsingTitleBlock(const TitleBlockProperties &old_tbp, const TitleBlockProperties &new_tbp) const;
 		int applyTitleBlockToFolios(const TitleBlockProperties &old_tbp, const TitleBlockProperties &new_tbp);
 		void setProjectProperties(const DiagramContext &);

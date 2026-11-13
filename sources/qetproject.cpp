@@ -57,6 +57,12 @@ QETProject::QETProject(QObject *parent) :
 {
 	setDefaultTitleBlockProperties(TitleBlockProperties::defaultProperties());
 
+		//The variables kept for the new projects (project properties,
+		//"Mémoriser pour les nouveaux projets")
+	{
+		m_project_properties = newProjectVariables();
+	}
+
 	m_elements_collection = new XmlElementCollection(this);
 	init();
 }
@@ -2161,4 +2167,98 @@ int QETProject::applyTitleBlockToFolios(const TitleBlockProperties &old_tbp, con
 		setModified(true);
 	}
 	return count_;
+}
+
+/**
+	@brief QETProject::keepVariablesOnFolios
+	The project variables change from @a old_context to @a new_context but
+	the existing folios must keep their current values: write the old value
+	of each modified variable in the custom fields of the title block of the
+	folios which don't have their own value yet (a custom field of a folio
+	overrides the project variable).
+	@return the number of folios modified
+*/
+int QETProject::keepVariablesOnFolios(const DiagramContext &old_context, const DiagramContext &new_context)
+{
+	const auto keys_{changedKeys(old_context, new_context)};
+	int count_{0};
+	for (const auto &diagram_ : qAsConst(m_diagrams_list))
+	{
+		auto tbp_{diagram_->border_and_titleblock.exportTitleBlock()};
+		bool modified_{false};
+		for (const auto &key : keys_) {
+			if (!tbp_.context.contains(key) && old_context.contains(key)) {
+				tbp_.context.addValue(key, old_context.value(key));
+				modified_ = true;
+			}
+		}
+		if (modified_) {
+			diagram_->border_and_titleblock.importTitleBlock(tbp_);
+			++count_;
+		}
+	}
+	if (count_) {
+		setModified(true);
+	}
+	return count_;
+}
+
+/**
+	@brief QETProject::newProjectVariables
+	@return the variables a new project starts with: the ones kept with the
+	button "Mémoriser pour les nouveaux projets" of the project properties,
+	or, if nothing was kept yet, the variables of the title blocks (empty,
+	ready to fill): revision table A to G, drafter, customer, document,
+	machine. The variables of the folios are not there.
+*/
+DiagramContext QETProject::newProjectVariables()
+{
+	QSettings settings;
+	DiagramContext variables_;
+	if (settings.contains(QStringLiteral("newproject/variables/size")))
+	{
+		variables_.fromSettings(settings, QStringLiteral("newproject/variables"));
+		return variables_;
+	}
+
+	QStringList keys_;
+	for (const auto &index : {"a", "b", "c", "d", "e", "f", "g"}) {
+		for (const auto &field : {"modif", "date", "dessine", "verifie"}) {
+			keys_ << QString(index) + QLatin1Char('-') + QString(field);
+		}
+	}
+	keys_ << QStringLiteral("nom-dessinateur") << QStringLiteral("adresse-dessinateur")
+		  << QStringLiteral("ville-dessinateur")
+		  << QStringLiteral("nom-client") << QStringLiteral("adresse-client")
+		  << QStringLiteral("ville-client")
+		  << QStringLiteral("titre") << QStringLiteral("document-n")
+		  << QStringLiteral("verifie") << QStringLiteral("initiales")
+		  << QStringLiteral("nummachine") << QStringLiteral("loc");
+	for (const auto &key : qAsConst(keys_)) {
+		variables_.addValue(key, QString());
+	}
+	return variables_;
+}
+
+/**
+	@brief QETProject::setDateOnAllFolios
+	Write @a date in the title block of every folio and in the default
+	title block of the project (for the new folios).
+*/
+void QETProject::setDateOnAllFolios(const QDate &date)
+{
+	auto default_tbp{defaultTitleBlockProperties()};
+	default_tbp.date = date;
+	default_tbp.useDate = TitleBlockProperties::UseDateValue;
+	setDefaultTitleBlockProperties(default_tbp);
+
+	for (const auto &diagram_ : qAsConst(m_diagrams_list))
+	{
+		auto tbp_{diagram_->border_and_titleblock.exportTitleBlock()};
+		tbp_.date = date;
+		tbp_.useDate = TitleBlockProperties::UseDateValue;
+		diagram_->border_and_titleblock.importTitleBlock(tbp_);
+	}
+	updateDiagramsFolioData();
+	setModified(true);
 }

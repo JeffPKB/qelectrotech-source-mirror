@@ -374,3 +374,15 @@ QString PrintConfigPage::title() const
 	return(tr("Impression", "configuration page title"));
 }
 
+
+/**
+	@brief NewDiagramPage::reloadTitleBlockFromProject
+	Read again the default title block of the project (it was changed
+	by "Repartir de ce projet"), so OK does not write the old one back.
+*/
+void NewDiagramPage::reloadTitleBlockFromProject()
+{
+	if (m_project) {
+		ipw -> setProperties(m_project -> defaultTitleBlockProperties());
+	}
+}
