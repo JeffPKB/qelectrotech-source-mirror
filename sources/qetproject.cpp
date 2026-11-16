@@ -2233,7 +2233,7 @@ DiagramContext QETProject::newProjectVariables()
 		  << QStringLiteral("ville-client")
 		  << QStringLiteral("titre") << QStringLiteral("document-n")
 		  << QStringLiteral("verifie") << QStringLiteral("initiales")
-		  << QStringLiteral("nummachine") << QStringLiteral("loc");
+		  << QStringLiteral("nummachine") << QStringLiteral("loc") << QStringLiteral("locmach");
 	for (const auto &key : qAsConst(keys_)) {
 		variables_.addValue(key, QString());
 	}

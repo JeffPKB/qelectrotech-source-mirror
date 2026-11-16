@@ -912,8 +912,12 @@ void BorderTitleBlock::updateDiagramContextForTitleBlock(
 		QLocale::system().toString(btb_date_, QLocale::ShortFormat));
 	context.addValue("title",       btb_title_);
 	context.addValue("filename",    btb_filename_);
-	context.addValue("plant",     btb_plant_);
-	context.addValue("locmach",     btb_locmach_);
+		//Installation and location: when the folio field is empty, keep
+		//the project variable of the same name (written once for all folios)
+	if (!btb_plant_.isEmpty() || !context.contains("plant"))
+		context.addValue("plant",     btb_plant_);
+	if (!btb_locmach_.isEmpty() || !context.contains("locmach"))
+		context.addValue("locmach",     btb_locmach_);
 	context.addValue("indexrev",    btb_indexrev_);
 	context.addValue("version",     btb_version_);
 	context.addValue("folio",       btb_final_folio_);

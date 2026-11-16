@@ -20,6 +20,7 @@
 #include "../diagram.h"
 #include "../diagramposition.h"
 #include "../qetapp.h"
+#include "../qetproject.h"
 #include "../qetgraphicsitem/conductor.h"
 #include "../qetgraphicsitem/element.h"
 #include "../qetxml.h"
@@ -30,6 +31,25 @@
 
 namespace autonum
 {
+	/**
+		@brief folioOrProjectValue
+		Installation (plant) or location (locmach) of a folio. When the
+		field of the folio is empty, the project variable of the same name
+		is used, so it can be written once for all folios.
+	*/
+	static QString folioOrProjectValue(Diagram *diagram, const QString &key)
+	{
+		if (!diagram) return QString();
+		QString value = key == QLatin1String("plant")
+				? diagram->border_and_titleblock.plant()
+				: diagram->border_and_titleblock.locmach();
+		if (value.isEmpty() && diagram->project()) {
+			value = diagram->project()->projectProperties()
+					.value(key).toString();
+		}
+		return value;
+	}
+
 	/**
 		@brief sequentialNumbers::sequentialNumbers
 	*/
@@ -338,13 +358,9 @@ namespace autonum
 							 ->border_and_titleblock
 							 .folioTotal()));
 			m_assigned_label.replace("%M",
-						 m_diagram
-						 -> border_and_titleblock
-						 .plant());
+						 folioOrProjectValue(m_diagram, "plant"));
 			m_assigned_label.replace("%LM",
-						 m_diagram
-						 -> border_and_titleblock
-						 .locmach());
+						 folioOrProjectValue(m_diagram, "locmach"));
 
 			QSettings settings;
 			if (m_element)
