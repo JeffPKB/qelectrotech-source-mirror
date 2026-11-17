@@ -1939,7 +1939,10 @@ void QETProject::updateDiagramsFolioData()
 	int total_folio = m_diagrams_list.count();
 
 	DiagramContext project_wide_properties = m_project_properties;
-	project_wide_properties.addValue("projecttitle", title());
+		//A "projecttitle" variable filled in the list of the project
+		//variables wins over the title (which is the file name by default)
+	if (project_wide_properties.value("projecttitle").toString().isEmpty())
+		project_wide_properties.addValue("projecttitle", title());
 	project_wide_properties.addValue("projectpath", filePath());
 	project_wide_properties.addValue("projectfilename", QFileInfo(filePath()).baseName());
 
@@ -2233,7 +2236,8 @@ DiagramContext QETProject::newProjectVariables()
 		  << QStringLiteral("ville-client")
 		  << QStringLiteral("titre") << QStringLiteral("document-n")
 		  << QStringLiteral("verifie") << QStringLiteral("initiales")
-		  << QStringLiteral("nummachine") << QStringLiteral("loc") << QStringLiteral("locmach");
+		  << QStringLiteral("nummachine") << QStringLiteral("loc") << QStringLiteral("locmach")
+		  << QStringLiteral("projecttitle");
 	for (const auto &key : qAsConst(keys_)) {
 		variables_.addValue(key, QString());
 	}
